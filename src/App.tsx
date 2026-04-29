@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 
 const NAV_LINKS = ['Fonctionnalités', 'Télécharger', 'Plans', 'Support'];
+const DOWNLOAD_URL = 'https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe';
 
 function useCountUp(target: number, duration: number = 2000, start: boolean = false) {
   const [count, setCount] = useState(0);
@@ -224,9 +225,9 @@ export default function App() {
             <Link to="/login" className="text-slate-400 hover:text-white text-sm font-medium transition-colors px-4 py-2">
               Connexion
             </Link>
-            <button className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95">
+            <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95">
               Télécharger
-            </button>
+            </a>
           </div>
 
           <button className="md:hidden text-slate-400 hover:text-white transition-colors" onClick={() => setMenuOpen(!menuOpen)}>
@@ -244,9 +245,9 @@ export default function App() {
             <Link to="/login" className="text-slate-300 hover:text-white text-sm font-medium py-1" onClick={() => setMenuOpen(false)}>
               Connexion
             </Link>
-            <button className="bg-cyan-500 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-xl w-full mt-2">
+            <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="bg-cyan-500 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-xl w-full mt-2 text-center">
               Télécharger gratuitement
-            </button>
+            </a>
           </div>
         )}
       </header>
@@ -277,11 +278,11 @@ export default function App() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <button className="group flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-base px-8 py-4 rounded-2xl transition-all duration-200 hover:shadow-xl hover:shadow-cyan-500/40 active:scale-95 w-full sm:w-auto">
+            <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-base px-8 py-4 rounded-2xl transition-all duration-200 hover:shadow-xl hover:shadow-cyan-500/40 active:scale-95 w-full sm:w-auto">
               <Download className="w-5 h-5" />
               Télécharger gratuitement
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </button>
+            </a>
             <Link to="/plans" className="flex items-center gap-2 border border-white/20 hover:border-white/40 text-white font-semibold text-base px-8 py-4 rounded-2xl transition-all duration-200 hover:bg-white/5 w-full sm:w-auto">
               Voir les plans
               <ChevronRight className="w-4 h-4" />
@@ -558,15 +559,30 @@ export default function App() {
                   ))}
                 </div>
 
-                <button
-                  className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 active:scale-95 ${
-                    highlight
-                      ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 hover:shadow-lg hover:shadow-cyan-500/30'
-                      : 'border border-white/20 hover:border-white/40 text-white hover:bg-white/5'
-                  }`}
-                >
-                  {cta}
-                </button>
+                {cta === 'Télécharger gratuitement' ? (
+                  <a
+                    href={DOWNLOAD_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 active:scale-95 ${
+                      highlight
+                        ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 hover:shadow-lg hover:shadow-cyan-500/30'
+                        : 'border border-white/20 hover:border-white/40 text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {cta}
+                  </a>
+                ) : (
+                  <button
+                    className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 active:scale-95 ${
+                      highlight
+                        ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 hover:shadow-lg hover:shadow-cyan-500/30'
+                        : 'border border-white/20 hover:border-white/40 text-white hover:bg-white/5'
+                    }`}
+                  >
+                    {cta}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -590,11 +606,11 @@ export default function App() {
             Rejoignez 25 millions d'utilisateurs qui font confiance à Glock Cleaner.
             Téléchargement gratuit, sans engagement.
           </p>
-          <button className="group flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-lg px-10 py-5 rounded-2xl transition-all duration-200 hover:shadow-2xl hover:shadow-cyan-500/40 active:scale-95 mx-auto">
+          <a href={DOWNLOAD_URL} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-lg px-10 py-5 rounded-2xl transition-all duration-200 hover:shadow-2xl hover:shadow-cyan-500/40 active:scale-95 mx-auto">
             <Download className="w-5 h-5" />
             Télécharger — Gratuit
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </button>
+          </a>
           <p className="text-slate-600 text-sm mt-6">Windows 10 / 11 — 4,2 Mo — Aucun adware</p>
         </div>
       </section>

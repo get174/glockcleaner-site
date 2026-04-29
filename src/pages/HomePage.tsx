@@ -250,7 +250,10 @@ export default function HomePage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <button className="group flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-base px-8 py-4 rounded-2xl transition-all duration-200 hover:shadow-xl hover:shadow-cyan-500/40 active:scale-95 w-full sm:w-auto">
+            <button 
+              className="group flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-base px-8 py-4 rounded-2xl transition-all duration-200 hover:shadow-xl hover:shadow-cyan-500/40 active:scale-95 w-full sm:w-auto"
+              onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+            >
               <Download className="w-5 h-5" />
               Télécharger gratuitement
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -463,7 +466,11 @@ export default function HomePage() {
                     </li>
                   ))}
                 </ul>
-                <button className={`w-full rounded-2xl px-6 py-4 font-semibold transition ${plan.highlight ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'border border-white/10 hover:border-white/20 bg-white/5 text-white'}`}>
+                <button 
+                  className={`w-full rounded-2xl px-6 py-4 font-semibold transition ${plan.highlight ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'border border-white/10 hover:border-white/20 bg-white/5 text-white'}`}
+                  onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+                  disabled={plan.cta !== 'Télécharger gratuitement'}
+                >
                   {plan.cta}
                 </button>
               </div>
@@ -518,7 +525,10 @@ export default function HomePage() {
             Plus de 25 millions d'utilisateurs dans le monde font déjà confiance à Glock Cleaner. 
             Pourquoi pas vous ? C'est gratuit, c'est facile, c'est maintenant.
           </p>
-          <button className="group flex items-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-bold text-lg px-12 py-5 rounded-3xl transition-all duration-200 hover:shadow-2xl hover:shadow-cyan-500/40 active:scale-95 mx-auto mb-8">
+          <button 
+            className="group flex items-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-bold text-lg px-12 py-5 rounded-3xl transition-all duration-200 hover:shadow-2xl hover:shadow-cyan-500/40 active:scale-95 mx-auto mb-8"
+            onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+          >
             <Download className="w-6 h-6" />
             Télécharger Gratuitement Maintenant
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
