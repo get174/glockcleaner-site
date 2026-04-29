@@ -28,32 +28,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (error) {
+      console.error('fetchProfile error:', error.message);
+      return null;
+    }
     if (data) setProfile(data as Profile);
+    return data as Profile | null;
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session); setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) await fetchProfile(session.user.id);
+      setLoading(false);
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        await fetchProfile(session.user.id);
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session); setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id); else setProfile(null);
-      setLoading(false);
-    });
+
     return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+    if (!error && data.session?.user) {
+      await fetchProfile(data.session.user.id);
+    }
     return { error: error as Error | null };
   };
 
   const register = async (email: string, password: string, metadata: { full_name: string; phone?: string }) => {
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: metadata } });
     if (error) return { error: error as Error | null };
+    if (data.session?.user) {
+      await fetchProfile(data.session.user.id);
+    }
     return { error: null, needsEmailConfirmation: !data.session };
   };
 
