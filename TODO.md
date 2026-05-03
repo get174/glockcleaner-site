@@ -1,18 +1,15 @@
-# GlockCleaner Download Button Implementation
+# GlockCleaner Site - Fix Production NetworkError Task
 
-## Approved Plan Steps
+## Plan Steps (Approved)
+1. ~~[DONE] Diagnose issue: Supabase env vars fallback to invalid placeholders in prod~~
+2. ✅ Update `src/lib/supabase.ts`: Remove fallbacks, add validation/logging.
+3. ✅ Update `src/contexts/AuthContext.tsx`: Add error handling for init.
+4. ✅ Create `.env.example` with template vars.
+5. ✅ Update `vite.config.ts`: Add env logging.
+6. [PENDING] Test: Run `npm run build && npm run preview` then check browser console/network tab on /login.
+7. [PENDING] Deploy instructions & prod env setup.
+8. [PENDING] attempt_completion
 
-### 1. ✅ Create TODO.md with breakdown
-### 2. ✅ Update src/pages/HomePage.tsx
-   - ✅ Hero section button
-   - ✅ Plans "Gratuit" CTA
-   - ✅ Final CTA button
-### 3. ✅ Update src/components/Navbar.tsx
-   - ✅ Desktop "Télécharger" button
-   - ✅ Mobile "Télécharger gratuitement" button
-### 4. ✅ Test functionality (dev server running at http://localhost:5174)
-### 5. ✅ Complete task with attempt_completion
-
-**Status: Task completed successfully!**
+**Next: User test step 6, then provide prod hosting details for final steps.**
 
 
