@@ -78,9 +78,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (email: string, password: string, metadata: { full_name: string; phone?: string }) => {
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: metadata } });
     if (error) return { error: error as Error | null };
+
+    const user = data.user ?? data.session?.user;
+    if (user) {
+      const profilePayload = {
+        id: user.id,
+        full_name: metadata.full_name,
+        phone: metadata.phone ?? null,
+      };
+
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert(profilePayload, { onConflict: 'id' });
+
+      if (profileError) {
+        console.error('Profile insert error:', profileError.message);
+        return { error: profileError as Error | null };
+      }
+    }
+
     if (data.session?.user) {
       await fetchProfile(data.session.user.id);
     }
+
     return { error: null, needsEmailConfirmation: !data.session };
   };
 
