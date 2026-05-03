@@ -74,7 +74,7 @@ export default function LoginPage() {
       if (mode === 'login') {
         const { error } = await login(email, password);
         if (error) throw error;
-        navigate('/');
+        navigate('/profile');
       } else {
         const { error, needsEmailConfirmation } = await register(email, password, {
           full_name: fullName.trim(),
@@ -85,7 +85,7 @@ export default function LoginPage() {
         if (needsEmailConfirmation) {
           setNeedsConfirmation(true);
         } else {
-          navigate('/');
+          navigate('/profile');
         }
       }
     } catch (err) {
