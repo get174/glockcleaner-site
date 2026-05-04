@@ -104,7 +104,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null, needsEmailConfirmation: !data.session };
   };
 
-  const logout = async () => { await supabase.auth.signOut(); setProfile(null); };
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setProfile(null);
+    window.location.href = '/';
+  };
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/reset-password` });
