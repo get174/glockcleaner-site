@@ -59,6 +59,48 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
     };
   }, []);
 
+  const backendUrl = import.meta.env.VITE_PAYPAL_BACKEND_URL || '';
+
+  const createPaypalOrder = async () => {
+    const response = await fetch(`${backendUrl}/api/paypal/create-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        amount: plan.price,
+        currency: PAYPAL_CURRENCY,
+        planName: `Plan ${plan.name}`,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Create order error response:', data);
+      throw new Error(data.error || 'Erreur création commande PayPal');
+    }
+
+    return data.orderID;
+  };
+
+  const capturePaypalOrder = async (orderID: string) => {
+    const response = await fetch(`${backendUrl}/api/paypal/capture-order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ orderID }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Capture order error response:', data);
+      throw new Error(data.error || 'Erreur de capture PayPal');
+    }
+
+    return data;
+  };
+
   useEffect(() => {
     if (!scriptReady || !window.paypal || !buttonContainer.current) {
       return;
@@ -73,26 +115,20 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
         shape: 'rect',
         label: 'pay',
       },
-      createOrder: (_data: any, actions: any) => {
+      createOrder: async () => {
         setLoading(true);
-        return actions.order.create({
-          purchase_units: [
-            {
-              amount: {
-                value: plan.price.toFixed(2),
-                currency_code: PAYPAL_CURRENCY,
-              },
-              description: `Plan ${plan.name}`,
-            },
-          ],
-          application_context: {
-            shipping_preference: 'NO_SHIPPING',
-          },
-        });
-      },
-      onApprove: async (_data: any, actions: any) => {
         try {
-          const order = await actions.order.capture();
+          return await createPaypalOrder();
+        } catch (error) {
+          console.error(error);
+          setMessage('Impossible de créer la commande PayPal.');
+          setLoading(false);
+          throw error;
+        }
+      },
+      onApprove: async (data: any) => {
+        try {
+          const captureResult = await capturePaypalOrder(data.orderID);
           const { data: userData } = await supabase.auth.getUser();
           const userId = userData.user?.id;
 
@@ -113,11 +149,12 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
 
           setMessage('Paiement réussi ! Votre licence est active.');
           setTimeout(() => navigate('/'), 3000);
+          return captureResult;
         } catch (error) {
           console.error('Erreur capture PayPal :', error);
           setMessage('Erreur lors de la finalisation du paiement.');
-        } finally {
           setLoading(false);
+          throw error;
         }
       },
       onError: (err: any) => {
