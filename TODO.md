@@ -7,7 +7,7 @@
 4. ✅ Create `.env.example` with template vars.
 5. [PENDING] Update `vite.config.ts`: Add env logging (optional).
 6. ✅ Test: `npm run build` succeeded. Lint may still fail due to existing PayPal any-types.
-7. [PENDING] Deploy instructions & prod env setup (set Vercel env vars as Build-time for Vite).
+7. ✅ Vercel setup notes: see `TODO.vercel.md` (Vite build-time env + PayPal API env).
 
 
 
