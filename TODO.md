@@ -8,7 +8,7 @@
 5. [PENDING] Update `vite.config.ts`: Add env logging (optional).
 6. ✅ Test: `npm run build` succeeded. Lint may still fail due to existing PayPal any-types.
 7. [PENDING] Deploy instructions & prod env setup (set Vercel env vars as Build-time for Vite).
-8. [PENDING] attempt_completion
+
 
 
 
