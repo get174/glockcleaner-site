@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, type ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import type { User, Session, Provider } from '@supabase/supabase-js';
+
 
 export interface Profile {
   id: string; full_name: string | null; phone: string | null; avatar_url: string | null;
@@ -38,18 +39,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-  const initAuth = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) await fetchProfile(session.user.id);
-    } catch (error) {
-      console.error('Auth init failed:', error);
-    } finally {
+    // If Supabase is not configured at build-time, keep the app bootable.
+    if (!isSupabaseConfigured) {
       setLoading(false);
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      return;
     }
-  };
+
+    const initAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setSession(session);
+        setUser(session?.user ?? null);
+        if (session?.user) await fetchProfile(session.user.id);
+      } catch (error) {
+        console.error('Auth init failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     initAuth();
 
@@ -66,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
 
   const login = async (email: string, password: string) => {
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
