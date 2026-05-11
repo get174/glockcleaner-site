@@ -5,9 +5,16 @@ const PAYPAL_BASE = `https://api.${PAYPAL_MODE === 'live' ? '' : 'sandbox.'}payp
 const TOKEN_URL = `${PAYPAL_BASE}/v1/oauth2/token`;
 const ORDER_URL = `${PAYPAL_BASE}/v2/checkout/orders`;
 
-const errorResponse = (res: any, message: string, status = 500) => {
+type ApiResponse = {
+  status: (code: number) => { json: (body: unknown) => void };
+};
+
+
+
+const errorResponse = (res: ApiResponse, message: string, status = 500) => {
   res.status(status).json({ error: message });
 };
+
 
 const getAccessToken = async () => {
   if (!PAYPAL_CLIENT_ID || !PAYPAL_SECRET) {
@@ -32,7 +39,17 @@ const getAccessToken = async () => {
   return data.access_token;
 };
 
-export default async function handler(req: any, res: any) {
+type HandlerReq = {
+  method?: string;
+  body?: { orderID?: string };
+};
+
+type HandlerRes = ApiResponse & {
+  status: (code: number) => { json: (body: unknown) => void };
+};
+
+export default async function handler(req: HandlerReq, res: HandlerRes) {
+
   if (req.method !== 'POST') {
     return errorResponse(res, 'Method not allowed', 405);
   }
@@ -58,8 +75,9 @@ export default async function handler(req: any, res: any) {
     }
 
     return res.status(200).json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('PayPal capture-order error:', error);
-    return errorResponse(res, String(error), 500);
+    return errorResponse(res, error instanceof Error ? error.message : 'Unknown error', 500);
   }
 }
+

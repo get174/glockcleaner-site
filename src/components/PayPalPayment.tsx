@@ -6,9 +6,15 @@ import type { User } from '@supabase/supabase-js';
 
 declare global {
   interface Window {
-    paypal?: any;
+    paypal?: {
+      Buttons: (options: unknown) => {
+        isEligible: () => boolean;
+        render: (container: HTMLDivElement) => void;
+      };
+    };
   }
 }
+
 
 export interface Plan {
   id: string;
@@ -33,7 +39,7 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
   const [scriptReady, setScriptReady] = useState(false);
   const [errorLoading, setErrorLoading] = useState<string | null>(null);
   const buttonContainer = useRef<HTMLDivElement | null>(null);
-  const txRef = `glock-${plan.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const txRef = useRef(`glock-${plan.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`);
 
   useEffect(() => {
     if (!PAYPAL_CLIENT_ID) {
@@ -126,9 +132,10 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
           throw error;
         }
       },
-      onApprove: async (data: any) => {
+      onApprove: async (data: { orderID: string }) => {
         try {
           const captureResult = await capturePaypalOrder(data.orderID);
+
           const { data: userData } = await supabase.auth.getUser();
           const userId = userData.user?.id;
 
@@ -157,11 +164,12 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
           throw error;
         }
       },
-      onError: (err: any) => {
+      onError: (err: unknown) => {
         console.error('Erreur PayPal :', err);
         setMessage('Le paiement PayPal a échoué. Veuillez réessayer.');
         setLoading(false);
       },
+
       onCancel: () => {
         setMessage('Paiement annulé.');
         setLoading(false);
