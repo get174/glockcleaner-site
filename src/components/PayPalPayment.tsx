@@ -114,13 +114,7 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
     const data = (await response.json()) as PaypalCreateOrderResponse;
     if (!response.ok) {
       console.error('Create order error response:', data);
-      const backendMessage = data?.error ? String(data.error) : 'Erreur création commande PayPal';
-      const debugHint = data?.paypalDebugId ? ` (debug_id: ${data.paypalDebugId})` : '';
-      throw new Error(`${backendMessage}${debugHint}`);
-    }
-
-    if (!data.orderID) {
-      throw new Error('Réponse backend invalide: orderID manquant.');
+      throw new Error(data.error || 'Erreur création commande PayPal');
     }
 
     return data.orderID;
@@ -136,13 +130,11 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
         body: JSON.stringify({ orderID }),
       });
 
-      const data = (await response.json()) as PaypalCaptureResponse;
-      if (!response.ok) {
-        console.error('Capture order error response:', data);
-        const backendMessage = data?.error ? String(data.error) : 'Erreur de capture PayPal';
-        const debugHint = data?.paypalDebugId ? ` (debug_id: ${data.paypalDebugId})` : '';
-        throw new Error(`${backendMessage}${debugHint}`);
-      }
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Capture order error response:', data);
+      throw new Error(data.error || 'Erreur de capture PayPal');
+    }
 
       return data;
     },
@@ -170,8 +162,7 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
           return await createPaypalOrder();
         } catch (error) {
           console.error(error);
-          const msg = error instanceof Error ? error.message : 'Impossible de créer la commande PayPal.';
-          setMessage(msg);
+          setMessage('Impossible de créer la commande PayPal.');
           setLoading(false);
           throw error;
         }
@@ -204,8 +195,7 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
           return captureResult;
         } catch (error) {
           console.error('Erreur capture PayPal :', error);
-          const msg = error instanceof Error ? error.message : 'Erreur lors de la finalisation du paiement.';
-          setMessage(msg);
+          setMessage('Erreur lors de la finalisation du paiement.');
           setLoading(false);
           throw error;
         }

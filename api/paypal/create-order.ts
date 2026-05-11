@@ -4,6 +4,10 @@ type ApiRequest = {
     amount?: number | string;
     currency?: string;
     planName?: string;
+<<<<<<< HEAD
+=======
+    orderID?: string;
+>>>>>>> main
   };
 };
 
@@ -17,6 +21,7 @@ type PaypalError = Error & {
   paypalDebugId?: string | null;
 };
 
+<<<<<<< HEAD
 type PaypalTokenResponse = {
   access_token?: string;
   error?: string;
@@ -28,6 +33,8 @@ type PaypalOrderResponse = {
   message?: string;
 };
 
+=======
+>>>>>>> main
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 const PAYPAL_MODE = process.env.PAYPAL_MODE === 'live' ? 'live' : 'sandbox';
@@ -66,15 +73,18 @@ const getAccessToken = async () => {
     error.details = data;
     error.paypalDebugId = response.headers.get('paypal-debug-id');
     throw error;
+<<<<<<< HEAD
   }
 
   if (!data.access_token) {
     const error = new Error('PayPal token missing in response.') as PaypalError;
     error.details = data;
     throw error;
+=======
+>>>>>>> main
   }
 
-  return data.access_token;
+  return data.access_token as string;
 };
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
@@ -127,19 +137,26 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       error.details = data;
       error.paypalDebugId = response.headers.get('paypal-debug-id');
       throw error;
+<<<<<<< HEAD
     }
 
     if (!data.id) {
       const error = new Error('PayPal order id missing in response.') as PaypalError;
       error.details = data;
       throw error;
+=======
+>>>>>>> main
     }
 
     return res.status(200).json({ orderID: data.id });
   } catch (rawError: unknown) {
     const error = rawError as PaypalError;
     const normalizedMessage =
+<<<<<<< HEAD
       error?.message?.replace(/^Error:\s*/, '') || 'Unknown error while creating PayPal order.';
+=======
+      error?.message?.replace(/^Error:\s*/, '') || 'Erreur inconnue lors de la création de la commande PayPal.';
+>>>>>>> main
     const details = error?.details ?? null;
     const paypalDebugId = error?.paypalDebugId ?? null;
     console.error('PayPal create-order error:', { message: normalizedMessage, details, paypalDebugId });

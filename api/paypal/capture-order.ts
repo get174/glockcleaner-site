@@ -15,12 +15,15 @@ type PaypalError = Error & {
   paypalDebugId?: string | null;
 };
 
+<<<<<<< HEAD
 type PaypalTokenResponse = {
   access_token?: string;
   error?: string;
   error_description?: string;
 };
 
+=======
+>>>>>>> main
 const PAYPAL_CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const PAYPAL_SECRET = process.env.PAYPAL_SECRET;
 const PAYPAL_MODE = process.env.PAYPAL_MODE === 'live' ? 'live' : 'sandbox';
@@ -59,15 +62,18 @@ const getAccessToken = async () => {
     error.details = data;
     error.paypalDebugId = response.headers.get('paypal-debug-id');
     throw error;
+<<<<<<< HEAD
   }
 
   if (!data.access_token) {
     const error = new Error('PayPal token missing in response.') as PaypalError;
     error.details = data;
     throw error;
+=======
+>>>>>>> main
   }
 
-  return data.access_token;
+  return data.access_token as string;
 };
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
@@ -93,7 +99,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const data = await response.json();
     if (!response.ok) {
+<<<<<<< HEAD
       const error = new Error((data as { message?: string }).message || JSON.stringify(data)) as PaypalError;
+=======
+      const error = new Error(data.message || JSON.stringify(data)) as PaypalError;
+>>>>>>> main
       error.details = data;
       error.paypalDebugId = response.headers.get('paypal-debug-id');
       throw error;
@@ -103,7 +113,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   } catch (rawError: unknown) {
     const error = rawError as PaypalError;
     const normalizedMessage =
+<<<<<<< HEAD
       error?.message?.replace(/^Error:\s*/, '') || 'Unknown error while capturing PayPal order.';
+=======
+      error?.message?.replace(/^Error:\s*/, '') || 'Erreur inconnue lors de la capture PayPal.';
+>>>>>>> main
     const details = error?.details ?? null;
     const paypalDebugId = error?.paypalDebugId ?? null;
     console.error('PayPal capture-order error:', { message: normalizedMessage, details, paypalDebugId });

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # TODO - Audit, corrections et améliorations
 
 ## Plan approuvé
@@ -11,3 +12,9 @@
 - [ ] Étape 2 en attente
 - [ ] Étape 3 en attente
 - [ ] Étape 4 en attente
+=======
+- [ ] Mettre à jour `api/paypal/create-order.ts` pour améliorer le diagnostic d'erreurs PayPal
+- [ ] Mettre à jour `api/paypal/capture-order.ts` pour améliorer le diagnostic d'erreurs PayPal
+- [ ] Mettre à jour `src/components/PayPalPayment.tsx` pour afficher les erreurs backend détaillées
+- [ ] Vérifier les changements et préparer les étapes de test
+>>>>>>> main
