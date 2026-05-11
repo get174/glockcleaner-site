@@ -77,7 +77,9 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
     const data = await response.json();
     if (!response.ok) {
       console.error('Create order error response:', data);
-      throw new Error(data.error || 'Erreur création commande PayPal');
+      const backendMessage = data?.error ? String(data.error) : 'Erreur création commande PayPal';
+      const debugHint = data?.paypalDebugId ? ` (debug_id: ${data.paypalDebugId})` : '';
+      throw new Error(`${backendMessage}${debugHint}`);
     }
 
     return data.orderID;
@@ -95,7 +97,9 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
     const data = await response.json();
     if (!response.ok) {
       console.error('Capture order error response:', data);
-      throw new Error(data.error || 'Erreur de capture PayPal');
+      const backendMessage = data?.error ? String(data.error) : 'Erreur de capture PayPal';
+      const debugHint = data?.paypalDebugId ? ` (debug_id: ${data.paypalDebugId})` : '';
+      throw new Error(`${backendMessage}${debugHint}`);
     }
 
     return data;
@@ -121,7 +125,8 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
           return await createPaypalOrder();
         } catch (error) {
           console.error(error);
-          setMessage('Impossible de créer la commande PayPal.');
+          const message = error instanceof Error ? error.message : 'Impossible de créer la commande PayPal.';
+          setMessage(message);
           setLoading(false);
           throw error;
         }
@@ -152,7 +157,8 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
           return captureResult;
         } catch (error) {
           console.error('Erreur capture PayPal :', error);
-          setMessage('Erreur lors de la finalisation du paiement.');
+          const message = error instanceof Error ? error.message : 'Erreur lors de la finalisation du paiement.';
+          setMessage(message);
           setLoading(false);
           throw error;
         }

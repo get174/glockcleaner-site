@@ -1,15 +1,4 @@
-# GlockCleaner Site - Fix Production NetworkError Task
-
-## Plan Steps (Approved)
-1. ~~[DONE] Diagnose issue: Supabase env vars fallback to invalid placeholders in prod~~
-2. ✅ Update `src/lib/supabase.ts`: Remove hard throw on missing env vars; add validation + safe fallback.
-3. ✅ Update `src/contexts/AuthContext.tsx`: Add error handling for init.
-4. ✅ Create `.env.example` with template vars.
-5. [PENDING] Update `vite.config.ts`: Add env logging (optional).
-6. ✅ Test: `npm run build` succeeded. Lint may still fail due to existing PayPal any-types.
-7. [PENDING] Deploy instructions & prod env setup (set Vercel env vars as Build-time for Vite).
-8. [PENDING] attempt_completion
-
-
-
-
+- [ ] Mettre à jour `api/paypal/create-order.ts` pour améliorer le diagnostic d'erreurs PayPal
+- [ ] Mettre à jour `api/paypal/capture-order.ts` pour améliorer le diagnostic d'erreurs PayPal
+- [ ] Mettre à jour `src/components/PayPalPayment.tsx` pour afficher les erreurs backend détaillées
+- [ ] Vérifier les changements et préparer les étapes de test
