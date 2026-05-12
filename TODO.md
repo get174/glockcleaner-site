@@ -1,7 +1,13 @@
-# TODO
+# TODO - Audit, corrections et améliorations
 
-## PayPal ESLint warnings fix
-- [ ] Update `src/components/PayPalPayment.tsx` to fix `react-hooks/exhaustive-deps` warning for `buttonContainer.current` in effect cleanup
-- [ ] Update `src/components/PayPalPayment.tsx` to fix missing dependencies for effect (`createPaypalOrder`, `capturePaypalOrder`, `txRef`) by stabilizing them and/or moving into effect
-- [ ] Re-run lint (if available) or verify ESLint warnings are gone
+## Plan approuvé
+- [ ] Corriger les conflits Git dans les fichiers critiques PayPal et TODO
+- [ ] Renforcer la validation des entrées API (`create-order`, `capture-order`)
+- [ ] Améliorer la robustesse et le typage de `src/components/PayPalPayment.tsx`
+- [ ] Vérifier avec lint + typecheck
 
+## Progression
+- [ ] Étape 1 en cours: résolution des conflits et harmonisation des handlers PayPal
+- [ ] Étape 2 en attente
+- [ ] Étape 3 en attente
+- [ ] Étape 4 en attente

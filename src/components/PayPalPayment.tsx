@@ -1,20 +1,51 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Loader2, Lock } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
+type PaypalCreateOrderResponse = {
+  orderID?: string;
+  error?: string;
+  paypalDebugId?: string;
+};
+
+type PaypalCaptureResponse = {
+  error?: string;
+  paypalDebugId?: string;
+};
+
+type PaypalButtonActions = {
+  order: {
+    create: () => Promise<string>;
+  };
+};
+
+type PaypalButtonsInstance = {
+  isEligible: () => boolean;
+  render: (container: HTMLDivElement) => void;
+};
+
+type PaypalButtonsOptions = {
+  style: {
+    layout: 'vertical';
+    color: 'blue';
+    shape: 'rect';
+    label: 'pay';
+  };
+  createOrder: () => Promise<string>;
+  onApprove: (data: { orderID: string }, actions: PaypalButtonActions) => Promise<PaypalCaptureResponse | void>;
+  onError: (err: unknown) => void;
+  onCancel: () => void;
+};
+
 declare global {
   interface Window {
     paypal?: {
-      Buttons: (options: unknown) => {
-        isEligible: () => boolean;
-        render: (container: HTMLDivElement) => void;
-      };
+      Buttons: (options: PaypalButtonsOptions) => PaypalButtonsInstance;
     };
   }
 }
-
 
 export interface Plan {
   id: string;
@@ -32,7 +63,7 @@ interface PaypalPaymentProps {
 const PAYPAL_CLIENT_ID = import.meta.env.VITE_PAYPAL_CLIENT_ID || '';
 const PAYPAL_CURRENCY = import.meta.env.VITE_PAYPAL_CURRENCY || 'EUR';
 
-export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
+export default function PayPalPayment({ plan }: PaypalPaymentProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -67,7 +98,7 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
 
   const backendUrl = import.meta.env.VITE_PAYPAL_BACKEND_URL || '';
 
-  const createPaypalOrder = async () => {
+  const createPaypalOrder = useCallback(async () => {
     const response = await fetch(`${backendUrl}/api/paypal/create-order`, {
       method: 'POST',
       headers: {
@@ -80,35 +111,47 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as PaypalCreateOrderResponse;
     if (!response.ok) {
       console.error('Create order error response:', data);
-      throw new Error(data.error || 'Erreur création commande PayPal');
+      const backendMessage = data?.error ? String(data.error) : 'Erreur création commande PayPal';
+      const debugHint = data?.paypalDebugId ? ` (debug_id: ${data.paypalDebugId})` : '';
+      throw new Error(`${backendMessage}${debugHint}`);
+    }
+
+    if (!data.orderID) {
+      throw new Error('Réponse backend invalide: orderID manquant.');
     }
 
     return data.orderID;
-  };
+  }, [backendUrl, plan.name, plan.price]);
 
-  const capturePaypalOrder = async (orderID: string) => {
-    const response = await fetch(`${backendUrl}/api/paypal/capture-order`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ orderID }),
-    });
+  const capturePaypalOrder = useCallback(
+    async (orderID: string) => {
+      const response = await fetch(`${backendUrl}/api/paypal/capture-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderID }),
+      });
 
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('Capture order error response:', data);
-      throw new Error(data.error || 'Erreur de capture PayPal');
-    }
+      const data = (await response.json()) as PaypalCaptureResponse;
+      if (!response.ok) {
+        console.error('Capture order error response:', data);
+        const backendMessage = data?.error ? String(data.error) : 'Erreur de capture PayPal';
+        const debugHint = data?.paypalDebugId ? ` (debug_id: ${data.paypalDebugId})` : '';
+        throw new Error(`${backendMessage}${debugHint}`);
+      }
 
-    return data;
-  };
+      return data;
+    },
+    [backendUrl]
+  );
 
   useEffect(() => {
-    if (!scriptReady || !window.paypal || !buttonContainer.current) {
+    const container = buttonContainer.current;
+    if (!scriptReady || !window.paypal || !container) {
       return;
     }
 
@@ -127,7 +170,8 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
           return await createPaypalOrder();
         } catch (error) {
           console.error(error);
-          setMessage('Impossible de créer la commande PayPal.');
+          const msg = error instanceof Error ? error.message : 'Impossible de créer la commande PayPal.';
+          setMessage(msg);
           setLoading(false);
           throw error;
         }
@@ -142,7 +186,7 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
           if (userId) {
             const { error } = await supabase.from('payments').insert({
               user_id: userId,
-              tx_ref: txRef,
+              tx_ref: txRef.current,
               plan_name: plan.name,
               amount: plan.price,
               currency: PAYPAL_CURRENCY,
@@ -155,11 +199,13 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
           }
 
           setMessage('Paiement réussi ! Votre licence est active.');
+          setLoading(false);
           setTimeout(() => navigate('/'), 3000);
           return captureResult;
         } catch (error) {
           console.error('Erreur capture PayPal :', error);
-          setMessage('Erreur lors de la finalisation du paiement.');
+          const msg = error instanceof Error ? error.message : 'Erreur lors de la finalisation du paiement.';
+          setMessage(msg);
           setLoading(false);
           throw error;
         }
@@ -177,17 +223,15 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
     });
 
     if (buttons.isEligible()) {
-      buttons.render(buttonContainer.current);
+      buttons.render(container);
     } else {
       setErrorLoading('Le bouton PayPal n’est pas disponible dans votre navigateur.');
     }
 
     return () => {
-      if (buttonContainer.current) {
-        buttonContainer.current.innerHTML = '';
-      }
+      container.innerHTML = '';
     };
-  }, [scriptReady, plan, user, navigate]);
+  }, [scriptReady, createPaypalOrder, capturePaypalOrder, plan.name, plan.price, navigate]);
 
   return (
     <div className="space-y-4">
@@ -231,4 +275,3 @@ export default function PayPalPayment({ plan, user }: PaypalPaymentProps) {
     </div>
   );
 }
-
