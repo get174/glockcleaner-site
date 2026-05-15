@@ -97,9 +97,10 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
   }, []);
 
   const backendUrl = import.meta.env.VITE_PAYPAL_BACKEND_URL || '';
+  const apiBaseUrl = backendUrl ? `${backendUrl.replace(/\/$/, '')}/api` : '/api';
 
   const createPaypalOrder = useCallback(async () => {
-    const response = await fetch(`${backendUrl}/api/paypal/create-order`, {
+    const response = await fetch(`${apiBaseUrl}/paypal/create-order`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -126,7 +127,7 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
 
   const capturePaypalOrder = useCallback(
     async (orderID: string) => {
-      const response = await fetch(`${backendUrl}/api/paypal/capture-order`, {
+      const response = await fetch(`${apiBaseUrl}/paypal/capture-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
