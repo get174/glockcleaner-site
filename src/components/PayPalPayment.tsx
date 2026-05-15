@@ -117,6 +117,10 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
       throw new Error(data.error || 'Erreur création commande PayPal');
     }
 
+    if (!data.orderID) {
+      throw new Error('Réponse backend invalide: orderID manquant.');
+    }
+
     return data.orderID;
   }, [backendUrl, plan.name, plan.price]);
 
@@ -130,11 +134,11 @@ export default function PayPalPayment({ plan }: PaypalPaymentProps) {
         body: JSON.stringify({ orderID }),
       });
 
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('Capture order error response:', data);
-      throw new Error(data.error || 'Erreur de capture PayPal');
-    }
+      const data = await response.json();
+      if (!response.ok) {
+        console.error('Capture order error response:', data);
+        throw new Error(data.error || 'Erreur de capture PayPal');
+      }
 
       return data;
     },

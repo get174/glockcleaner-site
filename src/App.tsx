@@ -24,8 +24,9 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import { DOWNLOAD_URL } from './constants';
+
 const NAV_LINKS = ['Fonctionnalités', 'Télécharger', 'Plans', 'Support'];
-const DOWNLOAD_URL = 'https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe';
 
 function useCountUp(target: number, duration: number = 2000, start: boolean = false) {
   const [count, setCount] = useState(0);

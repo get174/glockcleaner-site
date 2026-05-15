@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, Menu, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { DOWNLOAD_URL } from '../constants';
 import type { User } from '@supabase/supabase-js';
 
 const NAV_LINKS = ['Fonctionnalités', 'Télécharger', 'Plans', 'Support'];
@@ -74,7 +75,7 @@ export default function Navbar() {
           )}
           <button 
             className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-cyan-500/30 active:scale-95"
-            onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+            onClick={() => window.open(DOWNLOAD_URL, '_blank')}
           >
             Télécharger
           </button>
@@ -106,7 +107,7 @@ export default function Navbar() {
           )}
           <button 
             className="bg-cyan-500 text-slate-950 font-semibold text-sm px-5 py-2.5 rounded-xl w-full mt-2"
-            onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+            onClick={() => window.open(DOWNLOAD_URL, '_blank')}
           >
             Télécharger gratuitement
           </button>

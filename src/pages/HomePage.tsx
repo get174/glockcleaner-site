@@ -1,4 +1,5 @@
 import Navbar from '../components/Navbar';
+import { DOWNLOAD_URL } from '../constants';
 import { useState, useEffect, useRef, type ElementType } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -252,7 +253,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
             <button 
               className="group flex items-center gap-3 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-base px-8 py-4 rounded-2xl transition-all duration-200 hover:shadow-xl hover:shadow-cyan-500/40 active:scale-95 w-full sm:w-auto"
-              onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+              onClick={() => window.open(DOWNLOAD_URL, '_blank')}
             >
               <Download className="w-5 h-5" />
               Télécharger gratuitement
@@ -468,7 +469,7 @@ export default function HomePage() {
                 </ul>
                 <button 
                   className={`w-full rounded-2xl px-6 py-4 font-semibold transition ${plan.highlight ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400' : 'border border-white/10 hover:border-white/20 bg-white/5 text-white'}`}
-                  onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+                  onClick={() => window.open(DOWNLOAD_URL, '_blank')}
                   disabled={plan.cta !== 'Télécharger gratuitement'}
                 >
                   {plan.cta}
@@ -527,7 +528,7 @@ export default function HomePage() {
           </p>
           <button 
             className="group flex items-center gap-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-slate-950 font-bold text-lg px-12 py-5 rounded-3xl transition-all duration-200 hover:shadow-2xl hover:shadow-cyan-500/40 active:scale-95 mx-auto mb-8"
-            onClick={() => window.open('https://github.com/get174/glockcleaner/releases/download/v1.0.0/GlockCleaner.Setup.1.1.0.exe', '_blank')}
+            onClick={() => window.open(DOWNLOAD_URL, '_blank')}
           >
             <Download className="w-6 h-6" />
             Télécharger Gratuitement Maintenant
