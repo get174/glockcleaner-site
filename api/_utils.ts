@@ -39,7 +39,7 @@ function cryptoRandomBytes(n: number) {
   }
 }
 
-export const paypalClientId = process.env.PAYPAL_CLIENT_ID;
-export const paypalClientSecret = process.env.PAYPAL_CLIENT_SECRET;
-export const paypalEnvironment = process.env.NODE_ENV === 'production' ? 'production' : 'sandbox';
-export const paypalBaseUrl = paypalEnvironment === 'production' ? 'https://api.paypal.com' : 'https://api.sandbox.paypal.com';
+// Stripe configuration
+export const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+export const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+export const stripeBaseUrl = process.env.STRIPE_BASE_URL || 'http://localhost:5173';

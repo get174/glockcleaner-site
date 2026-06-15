@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
-import PayPalPayment from '../components/PayPalPayment';
+import StripePayment from '../components/StripePayment';
 import { supabase } from '../lib/supabase';
 import { Check, CreditCard, LogIn, User, Loader2 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
@@ -195,7 +195,7 @@ function PlansPage() {
                       <p className="text-white font-medium">{user.email}</p>
                     </div>
                   </div>
-                  <PayPalPayment plan={selectedPlan} user={user} />
+                  <StripePayment plan={selectedPlan} user={user} />
                 </div>
               ) : (
                 <div className="text-center space-y-6">
