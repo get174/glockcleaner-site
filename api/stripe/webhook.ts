@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
-import { supabase, generateLicenseKey } from '../_utils';
+import { supabase, generateLicenseKey, emailTransporter } from '../_utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-04-30.basil',
@@ -61,11 +61,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).send('Error saving license');
   }
 
+  // Send activation email with license key
   try {
-    await supabase.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: { license_key: licenseKey },
+    await emailTransporter.sendMail({
+      from: process.env.SMTP_FROM || 'noreply@getglockcleaner.com',
+      to: email,
+      subject: 'Your GlockCleaner Activation Key',
+      html: `
+        <h1>Thank you for your purchase!</h1>
+        <p>Your activation key is:</p>
+        <pre style="background: #f5f5f5; padding: 16px; font-size: 24px; border-radius: 8px;">${licenseKey}</pre>
+        <p>Use this key to activate your software.</p>
+      `,
     });
   } catch (emailErr) {
     console.error('Error sending email:', emailErr);
