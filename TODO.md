@@ -1,20 +1,8 @@
-<<<<<<< HEAD
-# TODO - Audit, corrections et améliorations
+TODO - Stripe API testing
 
 ## Plan approuvé
-- [ ] Corriger les conflits Git dans les fichiers critiques PayPal et TODO
-- [ ] Renforcer la validation des entrées API (`create-order`, `capture-order`)
-- [ ] Améliorer la robustesse et le typage de `src/components/PayPalPayment.tsx`
-- [ ] Vérifier avec lint + typecheck
-
-## Progression
-- [ ] Étape 1 en cours: résolution des conflits et harmonisation des handlers PayPal
-- [ ] Étape 2 en attente
-- [ ] Étape 3 en attente
-- [ ] Étape 4 en attente
-=======
-- [ ] Mettre à jour `api/paypal/create-order.ts` pour améliorer le diagnostic d'erreurs PayPal
-- [ ] Mettre à jour `api/paypal/capture-order.ts` pour améliorer le diagnostic d'erreurs PayPal
-- [ ] Mettre à jour `src/components/PayPalPayment.tsx` pour afficher les erreurs backend détaillées
-- [ ] Vérifier les changements et préparer les étapes de test
->>>>>>> main
+- [x] Confirmer scope Stripe-only (pas de création d'endpoints PayPal)
+- [ ] Tester `POST /api/stripe/create-payment-intent` (happy path + erreurs)
+- [ ] Tester `POST /api/stripe/webhook` (event valide + erreurs de signature)
+- [ ] Vérifier effets de bord webhook (idempotence/licence/email selon logs)
+- [ ] Résumer les résultats et actions correctives éventuelles

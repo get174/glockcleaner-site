@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { supabase, generateLicenseKey, emailTransporter } from '../_utils';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-04-30.basil',
+  apiVersion: '2026-05-27.dahlia',
 });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
