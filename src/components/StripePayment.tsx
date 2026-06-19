@@ -157,19 +157,31 @@ export default function StripePayment({ plan }: StripePaymentProps) {
           }),
         });
 
-        const data = (await response.json()) as StripeCreateIntentResponse;
+        // Check response status first before parsing JSON
         if (!response.ok) {
-          throw new Error(data.error || 'Erreur création du paiement');
+          let errorMsg = 'Erreur création du paiement';
+          try {
+            const errorData = await response.json();
+            errorMsg = errorData.error || errorMsg;
+          } catch {
+            // If parsing fails, use status text
+            errorMsg = `Erreur ${response.status}: ${response.statusText}`;
+          }
+          throw new Error(errorMsg);
         }
+
+        const data = (await response.json()) as StripeCreateIntentResponse;
 
         if (!data.clientSecret) {
           throw new Error('Réponse backend invalide: clientSecret manquant.');
         }
 
         setClientSecret(data.clientSecret);
-      } catch (err) {
+      } catch (err: unknown) {
+        const devErrorMsg = err instanceof Error ? err.message : String(err);
+        const displayError = import.meta.env.DEV ? devErrorMsg : 'Impossible deinitialiser le paiement. Veuillez réessayer.';
         console.error('Error creating payment intent:', err);
-        setError('Impossible deinitialiser le paiement. Veuillez réessayer.');
+        setError(displayError);
       }
     };
 

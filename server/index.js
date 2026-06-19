@@ -1,11 +1,17 @@
 import 'dotenv/config';
 import express from 'express';
+import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2026-05-27.dahlia',
+});
 
 // Configuration Supabase
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -46,6 +52,7 @@ function generateLicenseKey() {
 
 // Middleware de sécurité
 const app = express();
+app.use(cors());
 app.use(helmet());
 app.use(express.json({ limit: '10mb' }));
 
@@ -238,6 +245,107 @@ app.post('/api/admin/revoke', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }
+});
+
+// Stripe create-payment-intent
+app.post('/api/stripe/create-payment-intent', async (req, res) => {
+  const { amount, currency, planName } = req.body || {};
+  console.log('[create-payment-intent] Received:', { amount, currency, planName });
+  const numericAmount = typeof amount === 'string' ? Number(amount) : amount;
+  const normalizedCurrency = typeof currency === 'string' ? currency.trim().toUpperCase() : 'EUR';
+
+  if (!Number.isFinite(numericAmount) || !numericAmount || numericAmount <= 0) {
+    console.log('[create-payment-intent] Invalid amount:', numericAmount);
+    return res.status(400).json({ error: 'Invalid amount. Expected a number greater than 0.' });
+  }
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(numericAmount * 100),
+      currency: normalizedCurrency.toLowerCase(),
+      metadata: {
+        planName: typeof planName === 'string' && planName.trim() ? planName.trim() : 'GlockCleaner',
+      },
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    console.log('[create-payment-intent] Success, clientSecret:', paymentIntent.client_secret?.slice(0, 20) + '...');
+    return res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+    });
+  } catch (error) {
+    console.error('Stripe create-payment-intent error:', error);
+    return res.status(500).json({ error: 'Failed to create payment intent' });
+  }
+});
+
+// Stripe webhook (simplified version)
+app.post('/api/stripe/webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!sig || !webhookSecret) {
+    console.log('Missing Stripe signature');
+    return res.status(400).send('Invalid webhook');
+  }
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err);
+    return res.status(400).send('Invalid webhook');
+  }
+
+  if (event.type !== 'payment_intent.succeeded') {
+    return res.status(200).send('Event not processed');
+  }
+
+  const paymentIntent = event.data.object;
+  const paymentId = paymentIntent.id;
+  const email = paymentIntent.receipt_email;
+
+  const { data: existing } = await supabase
+    .from('licenses')
+    .select('id')
+    .eq('payment_id', paymentId)
+    .single();
+
+  if (existing) return res.status(200).send('Already processed');
+
+  const licenseKey = generateLicenseKey();
+
+  const { error } = await supabase
+    .from('licenses')
+    .insert({
+      email,
+      license_key: licenseKey,
+      payment_id: paymentId,
+      status: 'active',
+      created_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('Error saving license:', error);
+    return res.status(500).send('Error saving license');
+  }
+
+  // Envoyer email
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.EMAIL_FROM,
+      to: email,
+      subject: 'Votre licence GlockCleaner',
+      text: `Votre licence : ${licenseKey}`,
+      html: `<p>Votre licence : <strong>${licenseKey}</strong></p>`,
+    });
+  } catch (emailErr) {
+    console.error('Error sending email:', emailErr);
+  }
+
+  return res.status(200).send('OK');
 });
 
 const PORT = process.env.PORT || 3001;

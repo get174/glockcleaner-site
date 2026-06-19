@@ -120,7 +120,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    price: '29,99',
+    price: '39,99',
     period: '/ an',
     desc: 'Pour les utilisateurs avancés',
     features: [

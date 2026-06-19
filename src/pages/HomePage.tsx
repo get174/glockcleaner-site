@@ -136,7 +136,7 @@ const PLANS = [
   },
   {
     name: 'Pro',
-    price: '29,99',
+    price: '39,99',
     period: '/ an',
     desc: 'Pour les utilisateurs avancés',
     features: [
@@ -154,8 +154,8 @@ const PLANS = [
   {
     name: 'Business',
     price: '59,99',
-    period: '/ an',
-    desc: 'Pour les professionnels et PME',
+    period: '/ an - 3 appareils',
+    desc: 'Solution complète pour toute votre famille',
     features: [
       'Tout du plan Pro',
       'Support prioritaire 24/7',
