@@ -25,10 +25,44 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState('FR');
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
+
+  const phoneCountries = [
+    { code: 'FR', name: 'France', dialCode: '+33', min: 9, max: 9 },
+    { code: 'BE', name: 'Belgique', dialCode: '+32', min: 8, max: 9 },
+    { code: 'CH', name: 'Suisse', dialCode: '+41', min: 9, max: 9 },
+    { code: 'CA', name: 'Canada', dialCode: '+1', min: 10, max: 10 },
+    { code: 'US', name: 'États-Unis', dialCode: '+1', min: 10, max: 10 },
+    { code: 'GB', name: 'Royaume-Uni', dialCode: '+44', min: 10, max: 10 },
+    { code: 'DE', name: 'Allemagne', dialCode: '+49', min: 10, max: 11 },
+    { code: 'ES', name: 'Espagne', dialCode: '+34', min: 9, max: 9 },
+    { code: 'IT', name: 'Italie', dialCode: '+39', min: 9, max: 10 },
+    { code: 'MA', name: 'Maroc', dialCode: '+212', min: 9, max: 9 },
+    { code: 'DZ', name: 'Algérie', dialCode: '+213', min: 9, max: 9 },
+    { code: 'TN', name: 'Tunisie', dialCode: '+216', min: 8, max: 8 },
+    { code: 'SN', name: 'Sénégal', dialCode: '+221', min: 9, max: 9 },
+    { code: 'CI', name: "Côte d'Ivoire", dialCode: '+225', min: 10, max: 10 },
+    { code: 'CM', name: 'Cameroun', dialCode: '+237', min: 9, max: 9 },
+    { code: 'NG', name: 'Nigeria', dialCode: '+234', min: 10, max: 10 },
+    { code: 'IN', name: 'Inde', dialCode: '+91', min: 10, max: 10 },
+    { code: 'CN', name: 'Chine', dialCode: '+86', min: 11, max: 11 },
+    { code: 'JP', name: 'Japon', dialCode: '+81', min: 10, max: 11 },
+    { code: 'BR', name: 'Brésil', dialCode: '+55', min: 10, max: 11 },
+  ] as const;
+
+  const selectedCountryConfig =
+    phoneCountries.find((country) => country.code === selectedCountry) ?? phoneCountries[0];
+
+  const sanitizeTextInput = (value: string) => {
+    return value
+      .trim()
+      .replace(/[<>{}[\]\\\/;"`=&]/g, '')
+      .replace(/[\u0000-\u001F\u007F]/g, '');
+  };
 
   const getPasswordStrength = (pwd: string) => {
     let score = 0;
@@ -66,8 +100,8 @@ export default function LoginPage() {
         setError('Veuillez indiquer votre nom complet.');
         return;
       }
-      // Validate name: only letters, spaces, hyphens, accents
-      const sanitizedName = fullName.trim();
+      // Validate name: only letters, spaces, hyphens, accents and apostrophes
+      const sanitizedName = sanitizeTextInput(fullName);
       if (!/^[a-zA-ZÀ-ÿ\s\-']+$/.test(sanitizedName)) {
         setError('Le nom ne peut contenir que des lettres, espaces, tirets et apostrophes.');
         return;
@@ -76,13 +110,23 @@ export default function LoginPage() {
         setError('Le nom ne peut pas dépasser 100 caractères.');
         return;
       }
-      // Validate phone: only digits, +, -, spaces
-      if (phone.trim()) {
-        const cleanPhone = phone.replace(/[\s\-]/g, '');
-        if (!/^\+?[0-9]+$/.test(cleanPhone) || cleanPhone.replace(/\+/g, '').length < 8) {
-          setError('Numéro de téléphone invalide.');
-          return;
-        }
+
+      // Validate phone: digits only + country-based length
+      const sanitizedPhone = phone.trim() ? phone.replace(/\D/g, '') : '';
+      if (phone.trim() && !/^\d+$/.test(sanitizedPhone)) {
+        setError('Le numéro de téléphone doit contenir uniquement des chiffres.');
+        return;
+      }
+      if (
+        sanitizedPhone &&
+        (sanitizedPhone.length < selectedCountryConfig.min || sanitizedPhone.length > selectedCountryConfig.max)
+      ) {
+        setError(
+          `Numéro invalide pour ${selectedCountryConfig.name} (attendu: ${selectedCountryConfig.min}${
+            selectedCountryConfig.min !== selectedCountryConfig.max ? `-${selectedCountryConfig.max}` : ''
+          } chiffres).`,
+        );
+        return;
       }
     }
 
@@ -94,9 +138,12 @@ export default function LoginPage() {
         if (error) throw error;
         navigate('/profile');
       } else {
-        // Sanitize inputs to prevent injection
-        const sanitizedName = fullName.trim().replace(/[<>'";&]/g, '');
-        const sanitizedPhone = phone.trim() ? phone.replace(/[\s\-]/g, '') : undefined;
+        // Sanitize inputs to prevent malicious injections on front side
+        const sanitizedName = sanitizeTextInput(fullName);
+        const sanitizedPhoneLocal = phone.trim() ? phone.replace(/\D/g, '') : undefined;
+        const sanitizedPhone = sanitizedPhoneLocal
+          ? `${selectedCountryConfig.dialCode}${sanitizedPhoneLocal}`
+          : undefined;
 
         const { error, needsEmailConfirmation } = await register(email, password, {
           full_name: sanitizedName,
@@ -195,20 +242,48 @@ export default function LoginPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Téléphone (optionnel)</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-400 focus:outline-none transition-colors"
-                      placeholder="+33 6 12 34 56 78"
-                      maxLength={20}
-                      inputMode="tel"
-                      pattern="^\+?[0-9\s\-]+$"
-                      title="Que des chiffres, espaces, tirets et signe +"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_2fr] gap-3">
+                    <div>
+                      <label className="sr-only">Pays</label>
+                      <select
+                        value={selectedCountry}
+                        onChange={(e) => setSelectedCountry(e.target.value)}
+                        className="w-full px-3 py-3 bg-slate-900 text-white border border-white/10 rounded-lg focus:border-cyan-400 focus:outline-none transition-colors"
+                      >
+                        {phoneCountries.map((country) => (
+                          <option
+                            key={country.code}
+                            value={country.code}
+                            className="bg-slate-900 text-white hover:bg-cyan-500 hover:text-white checked:bg-cyan-600"
+                          >
+                            {country.name} ({country.dialCode})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <span className="absolute left-10 top-1/2 -translate-y-1/2 text-slate-300 text-sm">
+                        {selectedCountryConfig.dialCode}
+                      </span>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                        className="w-full pl-24 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-400 focus:outline-none transition-colors"
+                        placeholder="Numéro local"
+                        maxLength={selectedCountryConfig.max}
+                        inputMode="numeric"
+                        pattern="^\d+$"
+                        title="Que des chiffres uniquement"
+                      />
+                    </div>
                   </div>
+                  <p className="mt-2 text-xs text-slate-400">
+                    Format attendu pour {selectedCountryConfig.name} : {selectedCountryConfig.min}
+                    {selectedCountryConfig.min !== selectedCountryConfig.max ? ` à ${selectedCountryConfig.max}` : ''}{' '}
+                    chiffres (sans le 0 initial).
+                  </p>
                 </div>
               </>
             )}
@@ -371,7 +446,7 @@ export default function LoginPage() {
 
           <div className="mt-8 text-center">
             <button
-              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+              onClick={() => setMode((prevMode) => (prevMode === 'login' ? 'register' : 'login'))}
               className="text-cyan-400 hover:text-cyan-300 font-semibold transition-colors"
             >
               {mode === 'login' ? 'Pas de compte ? S\'inscrire' : 'Déjà un compte ? Se connecter'}

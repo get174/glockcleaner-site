@@ -1,8 +1,11 @@
-TODO - Stripe API testing
-
-## Plan approuvé
-- [x] Confirmer scope Stripe-only (pas de création d'endpoints PayPal)
-- [ ] Tester `POST /api/stripe/create-payment-intent` (happy path + erreurs)
-- [ ] Tester `POST /api/stripe/webhook` (event valide + erreurs de signature)
-- [ ] Vérifier effets de bord webhook (idempotence/licence/email selon logs)
-- [ ] Résumer les résultats et actions correctives éventuelles
+- [x] Renforcer la validation front contre injections sur le formulaire d'inscription
+- [x] Restreindre le téléphone à des chiffres uniquement
+- [x] Durcir la validation du nom pour éviter les caractères spéciaux non autorisés
+- [x] Aligner les valeurs envoyées à register avec les données nettoyées/validées
+- [x] Ajouter un sélecteur de pays pour le téléphone (inscription)
+- [x] Ajouter l’indicatif automatique selon le pays sélectionné
+- [x] Adapter la validation longueur téléphone selon le pays
+- [x] Envoyer le téléphone au format international (+code + numéro)
+- [x] Mettre à jour le style du sélecteur de pays (code téléphonique) sur LoginPage
+- [x] Ajouter un style explicite des options (`option`) pour hover/sélection
+- [x] Vérifier le rendu et la lisibilité (fond/texte) du menu déroulant
