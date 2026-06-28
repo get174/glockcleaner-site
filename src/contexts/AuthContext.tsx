@@ -79,6 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const login = async (email: string, password: string) => {
+    // Server-side validation
+    if (!email || !email.includes('@') || email.length > 254) {
+      return { error: new Error('Email invalide') as Error | null };
+    }
+    if (!password || password.length < 1) {
+      return { error: new Error('Mot de passe requis') as Error | null };
+    }
+
     const { error, data } = await supabase.auth.signInWithPassword({ email, password });
     if (!error && data.session?.user) {
       await fetchProfile(data.session.user.id);
@@ -87,6 +95,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (email: string, password: string, metadata: { full_name: string; phone?: string }) => {
+    // Server-side validation
+    if (!email || !email.includes('@') || email.length > 254) {
+      return { error: new Error('Email invalide') as Error | null };
+    }
+    if (!metadata.full_name || metadata.full_name.length > 100) {
+      return { error: new Error('Nom invalide') as Error | null };
+    }
+    // Only allow safe characters
+    if (!/^[a-zA-ZÀ-ÿ\s\-]+$/.test(metadata.full_name)) {
+      return { error: new Error('Caractères non autorisés dans le nom') as Error | null };
+    }
+    if (metadata.phone && !/^\+?[0-9]+$/.test(metadata.phone)) {
+      return { error: new Error('Numéro de téléphone invalide') as Error | null };
+    }
+
     const { data, error } = await supabase.auth.signUp({ email, password, options: { data: metadata } });
     if (error) return { error: error as Error | null };
 

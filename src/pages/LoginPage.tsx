@@ -54,8 +54,8 @@ export default function LoginPage() {
         setError('Les mots de passe ne correspondent pas.');
         return;
       }
-      if (password.length < 6) {
-        setError('Le mot de passe doit contenir au moins 6 caractères.');
+      if (password.length < 8) {
+        setError('Le mot de passe doit contenir au moins 8 caractères.');
         return;
       }
       if (!agreeTerms) {
@@ -65,6 +65,24 @@ export default function LoginPage() {
       if (!fullName.trim()) {
         setError('Veuillez indiquer votre nom complet.');
         return;
+      }
+      // Validate name: only letters, spaces, hyphens, accents
+      const sanitizedName = fullName.trim();
+      if (!/^[a-zA-ZÀ-ÿ\s\-']+$/.test(sanitizedName)) {
+        setError('Le nom ne peut contenir que des lettres, espaces, tirets et apostrophes.');
+        return;
+      }
+      if (sanitizedName.length > 100) {
+        setError('Le nom ne peut pas dépasser 100 caractères.');
+        return;
+      }
+      // Validate phone: only digits, +, -, spaces
+      if (phone.trim()) {
+        const cleanPhone = phone.replace(/[\s\-]/g, '');
+        if (!/^\+?[0-9]+$/.test(cleanPhone) || cleanPhone.replace(/\+/g, '').length < 8) {
+          setError('Numéro de téléphone invalide.');
+          return;
+        }
       }
     }
 
@@ -76,9 +94,13 @@ export default function LoginPage() {
         if (error) throw error;
         navigate('/profile');
       } else {
+        // Sanitize inputs to prevent injection
+        const sanitizedName = fullName.trim().replace(/[<>'";&]/g, '');
+        const sanitizedPhone = phone.trim() ? phone.replace(/[\s\-]/g, '') : undefined;
+
         const { error, needsEmailConfirmation } = await register(email, password, {
-          full_name: fullName.trim(),
-          phone: phone.trim() || undefined,
+          full_name: sanitizedName,
+          phone: sanitizedPhone,
         });
         if (error) throw error;
 
@@ -165,6 +187,9 @@ export default function LoginPage() {
                       className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-400 focus:outline-none transition-colors"
                       placeholder="Votre nom complet"
                       required
+                      maxLength={100}
+                      pattern="^[a-zA-ZÀ-ÿ\s\-']+$"
+                      title="Lettres, espaces, tirets et apostrophes uniquement"
                     />
                   </div>
                 </div>
@@ -178,6 +203,10 @@ export default function LoginPage() {
                       onChange={(e) => setPhone(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-400 focus:outline-none transition-colors"
                       placeholder="+33 6 12 34 56 78"
+                      maxLength={20}
+                      inputMode="tel"
+                      pattern="^\+?[0-9\s\-]+$"
+                      title="Que des chiffres, espaces, tirets et signe +"
                     />
                   </div>
                 </div>
@@ -195,6 +224,7 @@ export default function LoginPage() {
                   className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg focus:border-cyan-400 focus:outline-none transition-colors"
                   placeholder="votre@email.com"
                   required
+                  maxLength={254}
                 />
               </div>
             </div>

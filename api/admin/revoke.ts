@@ -7,7 +7,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (apiKey !== process.env.ADMIN_API_KEY) return res.status(401).json({ error: 'Unauthorized' });
 
   const { licenseKey } = req.body || {};
-  if (!licenseKey) return res.status(400).json({ error: 'License key required' });
+  if (!licenseKey || typeof licenseKey !== 'string' || licenseKey.length > 50) {
+    return res.status(400).json({ error: 'License key required' });
+  }
 
   try {
     const { error } = await supabase

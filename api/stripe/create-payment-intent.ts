@@ -14,12 +14,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-05-27.dahlia',
 });
 
+// Whitelist of allowed currencies to prevent rate manipulation
+const ALLOWED_CURRENCIES = new Set(['EUR', 'USD', 'GBP']);
+const MAX_AMOUNT = 10000; // Max 10,000 per transaction (cents)
+
 export default async function handler(req: ApiRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).send('Method not allowed');
   }
 
-  const { amount, currency, planName } = req.body || {};
+  const { amount, currency, planName, userEmail } = req.body || {};
   const numericAmount = typeof amount === 'string' ? Number(amount) : amount;
   const normalizedCurrency = typeof currency === 'string' ? currency.trim().toUpperCase() : 'EUR';
 
@@ -31,12 +35,33 @@ export default async function handler(req: ApiRequest, res: VercelResponse) {
     return res.status(400).json({ error: 'Invalid currency. Expected a non-empty string.' });
   }
 
+  // SECURITY: Whitelist currency to prevent rate manipulation
+  if (!ALLOWED_CURRENCIES.has(normalizedCurrency)) {
+    return res.status(400).json({ error: 'Currency not supported.' });
+  }
+
+  // SECURITY: Limit maximum amount
+  const amountInCents = Math.round(numericAmount * 100);
+  if (amountInCents > MAX_AMOUNT * 100) {
+    return res.status(400).json({ error: 'Amount exceeds maximum allowed.' });
+  }
+
+  // Sanitize planName
+  const sanitizedPlanName = typeof planName === 'string' && planName.trim() ? planName.trim() : 'GlockCleaner';
+
+  // SECURITY: Validate email for webhook
+  const sanitizedEmail = typeof userEmail === 'string' ? userEmail.trim() : '';
+  if (sanitizedEmail && (!sanitizedEmail.includes('@') || sanitizedEmail.length > 254)) {
+    return res.status(400).json({ error: 'Invalid email.' });
+  }
+
   try {
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(numericAmount * 100), // Stripe uses cents
+      amount: amountInCents,
       currency: normalizedCurrency.toLowerCase(),
       metadata: {
-        planName: typeof planName === 'string' && planName.trim() ? planName.trim() : 'GlockCleaner',
+        planName: sanitizedPlanName,
+        userEmail: sanitizedEmail, // Required for webhook - never trust receipt_email
       },
       automatic_payment_methods: {
         enabled: true,

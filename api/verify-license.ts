@@ -4,7 +4,9 @@ import { supabase } from './_utils';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { licenseKey } = req.body || {};
-  if (!licenseKey) return res.status(400).json({ valid: false, error: 'License key required' });
+  if (!licenseKey || typeof licenseKey !== 'string' || licenseKey.length > 50) {
+    return res.status(400).json({ valid: false, error: 'License key required' });
+  }
 
   try {
     const { data, error } = await supabase

@@ -34,7 +34,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const paymentIntent = event.data.object as Stripe.PaymentIntent;
   const paymentId = paymentIntent.id;
-  const email = paymentIntent.receipt_email;
+
+  // SECURITY FIX: Never trust receipt_email from Stripe - it can be manipulated
+  // Use metadata set during payment creation instead
+  const email = paymentIntent.metadata?.userEmail || paymentIntent.receipt_email;
+
+  // Validate email format before using
+  if (!email || typeof email !== 'string' || !email.includes('@')) {
+    console.error('Invalid email in payment metadata');
+    return res.status(400).send('Invalid payment data');
+  }
+
+  const sanitizedEmail = email.toLowerCase().trim();
+  if (sanitizedEmail.length > 254) {
+    console.error('Email too long');
+    return res.status(400).send('Invalid email');
+  }
 
   const { data: existing } = await supabase
     .from('licenses')
@@ -49,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { error } = await supabase
     .from('licenses')
     .insert({
-      email,
+      email: sanitizedEmail,
       license_key: licenseKey,
       payment_id: paymentId,
       status: 'active',
@@ -65,7 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await emailTransporter.sendMail({
       from: process.env.SMTP_FROM || 'noreply@getglockcleaner.com',
-      to: email,
+      to: sanitizedEmail,
       subject: 'Your GlockCleaner Activation Key',
       html: `
         <h1>Thank you for your purchase!</h1>
