@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
-import { supabase } from '../_utils';
+import { supabase } from '../_utils.js';
 
 type ApiRequest = VercelRequest & {
   body: {

@@ -9,3 +9,8 @@
 - [x] Mettre à jour le style du sélecteur de pays (code téléphonique) sur LoginPage
 - [x] Ajouter un style explicite des options (`option`) pour hover/sélection
 - [x] Vérifier le rendu et la lisibilité (fond/texte) du menu déroulant
+- [x] Vérifier l’URL webhook Stripe attendue par le code
+- [x] Confirmer que `/api/stripe/webhook` est la bonne route
+- [x] Corriger les imports NodeNext (`../_utils.js`) dans les handlers Stripe
+- [x] Ajouter un alias de compatibilité `/api/webhook` -> `/api/stripe/webhook`
+- [x] Vérifier rapidement la cohérence TypeScript des fichiers modifiés
