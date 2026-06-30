@@ -2,6 +2,12 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
 import { supabase, generateLicenseKey, emailTransporter } from '../_utils.js';
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-05-27.dahlia',
 });
@@ -19,10 +25,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid webhook');
   }
 
+  // Get raw body - with bodyParser disabled, body is Buffer or string
+  const payload = req.body as string | Buffer;
+
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(req.body as string, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(payload, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return res.status(400).send('Invalid webhook');

@@ -9,7 +9,12 @@ import nodemailer from 'nodemailer';
 import axios from 'axios';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error('❌ Stripe key missing! Set STRIPE_SECRET_KEY in .env');
+  process.exit(1);
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2026-05-27.dahlia',
 });
 
@@ -52,9 +57,19 @@ function generateLicenseKey() {
 
 // Middleware de sécurité
 const app = express();
-app.use(cors());
+// Parse allowed origins (comma-separated in env)
+const allowedOrigins = process.env.ALLOWED_ORIGIN
+  ? process.env.ALLOWED_ORIGIN.split(',').map(o => o.trim())
+  : false;
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
 app.use(helmet());
-app.use(express.json({ limit: '10mb' }));
+
+// NOTE: express.json() is needed for all routes except Stripe webhook
+// Stripe webhook uses express.raw() as route-specific middleware
 
 // Middleware de logging
 app.use((req, res, next) => {
@@ -69,6 +84,16 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
 });
 app.use('/api/', limiter);
+
+// Conditional body parsing: skip for Stripe webhook
+const jsonParser = express.json({ limit: '10mb' });
+app.use((req, res, next) => {
+  if (req.originalUrl === '/api/stripe/webhook') {
+    // Skip JSON parsing for Stripe webhook
+    return next();
+  }
+  return jsonParser(req, res, next);
+});
 
 // Route de vérification de licence
 app.post('/api/verify-license', async (req, res) => {
@@ -282,7 +307,7 @@ app.post('/api/stripe/create-payment-intent', async (req, res) => {
 });
 
 // Stripe webhook (simplified version)
-app.post('/api/stripe/webhook', async (req, res) => {
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -293,7 +318,9 @@ app.post('/api/stripe/webhook', async (req, res) => {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    // With express.raw() middleware, req.body is a Buffer - convert to string
+    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf-8') : req.body;
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return res.status(400).send('Invalid webhook');
@@ -305,7 +332,12 @@ app.post('/api/stripe/webhook', async (req, res) => {
 
   const paymentIntent = event.data.object;
   const paymentId = paymentIntent.id;
-  const email = paymentIntent.receipt_email;
+  const email = paymentIntent.receipt_email || paymentIntent.metadata?.customer_email;
+
+  if (!email) {
+    console.error('No email found in payment intent');
+    return res.status(400).send('No email provided');
+  }
 
   const { data: existing } = await supabase
     .from('licenses')
