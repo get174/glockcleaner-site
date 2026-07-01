@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { emailTransporter, ensureLicenseForPayment } from '../_utils.js';
 
@@ -27,15 +26,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid webhook');
   }
 
-  const payload = await buffer(req);
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  const requestBody = Buffer.concat(chunks).toString('utf8');
+
   if (isDevelopment) {
-    console.log('[stripe-webhook] payload length', payload.length, 'content-type', req.headers['content-type']);
+    console.log('[stripe-webhook] payload length', requestBody.length, 'content-type', req.headers['content-type']);
   }
 
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(payload, sig, webhookSecret);
+    event = stripe.webhooks.constructEvent(requestBody, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return res.status(400).send('Invalid webhook');
