@@ -28,14 +28,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (error) {
-      console.error('fetchProfile error:', error.message);
-      return null;
+  const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const fetchProfile = async (userId: string, retries = 3) => {
+    for (let attempt = 0; attempt <= retries; attempt += 1) {
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+
+      if (error) {
+        if (error.code !== 'PGRST116') {
+          console.error('fetchProfile error:', error.message);
+        }
+        if (attempt < retries) {
+          await wait(500);
+          continue;
+        }
+        return null;
+      }
+
+      if (data) {
+        setProfile(data as Profile);
+        return data as Profile | null;
+      }
+
+      if (attempt < retries) {
+        await wait(500);
+      }
     }
-    if (data) setProfile(data as Profile);
-    return data as Profile | null;
+
+    return null;
   };
 
   useEffect(() => {
@@ -115,24 +135,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const user = data.user ?? data.session?.user;
     if (user) {
-      const profilePayload = {
-        id: user.id,
-        full_name: metadata.full_name,
-        phone: metadata.phone ?? null,
-      };
-
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(profilePayload, { onConflict: 'id' });
-
-      if (profileError) {
-        console.error('Profile insert error:', profileError.message);
-        return { error: profileError as Error | null };
-      }
+      await fetchProfile(user.id, 3);
     }
 
     if (data.session?.user) {
-      await fetchProfile(data.session.user.id);
+      await fetchProfile(data.session.user.id, 3);
     }
 
     return { error: null, needsEmailConfirmation: !data.session };
