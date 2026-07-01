@@ -12,6 +12,19 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-05-27.dahlia',
 });
 
+async function getRawBody(req: VercelRequest): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Uint8Array[] = [];
+
+    req.on('data', (chunk: Uint8Array | string) => {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    });
+
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).send('Method not allowed');
@@ -21,16 +34,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!sig || !webhookSecret) {
-    console.log('Missing Stripe signature');
+    console.log('Missing Stripe signature or webhook secret');
     return res.status(400).send('Invalid webhook');
   }
 
-  // Read raw body from the request stream to ensure signature verification
-  const chunks: Uint8Array[] = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-  }
-  const payload = Buffer.concat(chunks);
+  const payload = await getRawBody(req);
+  console.log('[stripe-webhook] payload length', payload.length, 'content-type', req.headers['content-type']);
 
   let event: Stripe.Event;
 

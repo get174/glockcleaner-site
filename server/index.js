@@ -88,7 +88,7 @@ app.use('/api/', limiter);
 // Conditional body parsing: skip for Stripe webhook
 const jsonParser = express.json({ limit: '10mb' });
 app.use((req, res, next) => {
-  if (req.originalUrl === '/api/stripe/webhook') {
+  if (req.path === '/api/stripe/webhook' || req.originalUrl.startsWith('/api/stripe/webhook')) {
     // Skip JSON parsing for Stripe webhook
     return next();
   }
@@ -318,9 +318,21 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 
   let event;
   try {
-    // With express.raw() middleware, req.body is a Buffer - convert to string
-    const rawBody = Buffer.isBuffer(req.body) ? req.body.toString('utf-8') : req.body;
-    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    const rawBody = req.body;
+    const bodyBuffer = Buffer.isBuffer(rawBody)
+      ? rawBody
+      : typeof rawBody === 'string'
+      ? Buffer.from(rawBody, 'utf-8')
+      : null;
+
+    console.log('[stripe-webhook] payload length', bodyBuffer ? bodyBuffer.length : 0, 'content-type', req.headers['content-type']);
+
+    if (!bodyBuffer) {
+      console.error('Stripe webhook raw body is missing or not a buffer', { type: typeof rawBody });
+      return res.status(400).send('Invalid webhook');
+    }
+
+    event = stripe.webhooks.constructEvent(bodyBuffer, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err);
     return res.status(400).send('Invalid webhook');
