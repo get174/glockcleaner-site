@@ -55,7 +55,7 @@ function CheckoutForm({
       setLoading(true);
       setMessage(null);
 
-      const { error: submitError } = await stripe.confirmPayment({
+      const { error: submitError, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: window.location.origin + '/',
@@ -104,8 +104,11 @@ function CheckoutForm({
           });
 
           if (!finalizeResponse.ok) {
-            console.error('Erreur finalisation licence Stripe:', finalizeResponse.statusText);
+            const errorText = await finalizeResponse.text();
+            console.error('Erreur finalisation licence Stripe:', finalizeResponse.status, errorText);
           }
+        } else {
+          console.error('paymentIntent non disponible après confirmPayment');
         }
       } catch (finalizeError) {
         console.error('Erreur appel finalisation licence:', finalizeError);

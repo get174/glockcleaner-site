@@ -11,13 +11,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     userEmail?: string;
   };
 
+  const sanitizedEmail = typeof userEmail === 'string' ? userEmail.trim().toLowerCase() : '';
   console.log('[finalize-payment] request received', { paymentIntentId, userEmail: sanitizedEmail });
 
   if (!paymentIntentId || typeof paymentIntentId !== 'string' || paymentIntentId.trim() === '') {
     return res.status(400).json({ error: 'paymentIntentId is required' });
   }
-
-  const sanitizedEmail = typeof userEmail === 'string' ? userEmail.trim().toLowerCase() : '';
   if (!sanitizedEmail || !sanitizedEmail.includes('@') || sanitizedEmail.length > 254) {
     return res.status(400).json({ error: 'Invalid email' });
   }
