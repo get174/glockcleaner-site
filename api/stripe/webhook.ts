@@ -19,7 +19,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const sig = req.headers['stripe-signature'] as string;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-  const isDevelopment = process.env.NODE_ENV === 'development';
 
   if (!sig || !webhookSecret) {
     console.log('Missing Stripe signature or webhook secret');
@@ -32,9 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const requestBody = Buffer.concat(chunks).toString('utf8');
 
-  if (isDevelopment) {
-    console.log('[stripe-webhook] payload length', requestBody.length, 'content-type', req.headers['content-type']);
-  }
+  console.log('[stripe-webhook] payload length', requestBody.length, 'content-type', req.headers['content-type']);
 
   let event: Stripe.Event;
 
@@ -49,11 +46,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid webhook');
   }
 
-  if (isDevelopment) {
-    console.log('[stripe-webhook] received event', { type: event.type, id: event.id });
-  }
+  console.log('[stripe-webhook] received event', { type: event.type, id: event.id });
 
-  if (event.type !== 'checkout.session.completed') {
+  const supportedEventTypes = ['checkout.session.completed', 'payment_intent.succeeded'];
+  if (!supportedEventTypes.includes(event.type)) {
+    console.log('[stripe-webhook] ignoring event type', { type: event.type, id: event.id });
     return res.status(200).send('Event not processed');
   }
 
@@ -67,6 +64,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? checkoutSession.payment_intent
       : checkoutSession.payment_intent?.id || checkoutSession.id;
     email = checkoutSession.customer_details?.email || checkoutSession.customer_email || checkoutSession.metadata?.userEmail || '';
+  } else if (event.type === 'payment_intent.succeeded') {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    paymentId = paymentIntent.id;
+    email = paymentIntent.metadata?.userEmail || paymentIntent.receipt_email || '';
   }
 
   console.log('[stripe-webhook] extracted checkout data', {
@@ -87,14 +88,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const sanitizedEmail = email.toLowerCase().trim();
-  if (isDevelopment) {
-    console.log('[stripe-webhook] processing payment', { eventType: event.type, paymentId, email: sanitizedEmail });
-  }
+  console.log('[stripe-webhook] processing payment', { eventType: event.type, paymentId, email: sanitizedEmail });
 
   if (!sanitizedEmail || sanitizedEmail.length > 254 || !sanitizedEmail.includes('@')) {
     console.error('Invalid email in payment metadata');
     return res.status(400).send('Invalid payment data');
   }
+
+  console.log('[stripe-webhook] calling ensureLicenseForPayment', {
+    eventType: event.type,
+    paymentId,
+    email: sanitizedEmail,
+  });
 
   try {
     const result = await ensureLicenseForPayment({
