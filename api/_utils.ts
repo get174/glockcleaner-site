@@ -1,4 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 
@@ -10,15 +9,6 @@ const hasSupabaseConfig = Boolean(supabaseUrl && supabaseServiceKey);
 if (!hasSupabaseConfig) {
   console.error('Supabase config missing in serverless environment. Expected SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY).');
 }
-
-export const supabase = hasSupabaseConfig
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    })
-  : null;
 
 export const emailTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -44,9 +34,9 @@ export async function ensureLicenseForPayment({
   email: string;
   paymentId: string;
 }) {
-  if (!supabase) {
+  if (!hasSupabaseConfig) {
     const error = new Error('Supabase is not configured for license creation.');
-    console.error('[license] missing Supabase client', { paymentId });
+    console.error('[license] missing Supabase config', { paymentId });
     throw error;
   }
 
@@ -58,18 +48,24 @@ export async function ensureLicenseForPayment({
     throw new Error('Invalid email for license creation');
   }
 
-  const { data: existing, error: existingError } = await supabase
-    .from('licenses')
-    .select('id, license_key, status')
-    .eq('payment_id', paymentId)
-    .maybeSingle();
+  const existingResponse = await fetch(`${supabaseUrl}/rest/v1/licenses?payment_id=eq.${encodeURIComponent(paymentId)}&select=id,license_key,status`, {
+    method: 'GET',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+    },
+  });
 
-  if (existingError && existingError.code !== 'PGRST116') {
-    console.error('[license] lookup failed', { paymentId, error: existingError });
-    throw existingError;
+  const existingData = await existingResponse.json();
+
+  if (!existingResponse.ok) {
+    console.error('[license] lookup failed', { paymentId, status: existingResponse.status, body: existingData });
+    throw new Error('Failed to query existing licenses.');
   }
 
-  if (existing) {
+  if (Array.isArray(existingData) && existingData.length > 0) {
+    const existing = existingData[0];
     console.log('[license] existing license found', { paymentId, licenseKey: existing.license_key, status: existing.status });
     return {
       created: false,
@@ -81,39 +77,45 @@ export async function ensureLicenseForPayment({
   const licenseKey = generateLicenseKey();
   console.log('[license] generating new license', { paymentId, licenseKey });
 
-  const { data, error } = await supabase
-    .from('licenses')
-    .insert({
+  console.log('[license] inserting license row', {
+    paymentId,
+    email: sanitizedEmail,
+    licenseKey,
+    table: 'licenses',
+  });
+
+  const insertResponse = await fetch(`${supabaseUrl}/rest/v1/licenses`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseServiceKey,
+      Authorization: `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+    },
+    body: JSON.stringify({
       email: sanitizedEmail,
       license_key: licenseKey,
       payment_id: paymentId,
       status: 'active',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-    })
-    .select('id, license_key, status')
-    .single();
+    }),
+  });
 
-  if (error) {
-    console.error('[license] insert failed', { paymentId, error });
+  const insertBody = await insertResponse.json().catch(() => null);
 
-    if (error.code === '42P01') {
-      throw new Error('The licenses table does not exist. Run the Supabase migration from supabase/migrations/002_licenses.sql.');
-    }
-
-    if (error.code === '42501') {
-      throw new Error('Supabase blocked the insert because of RLS/permissions. Verify the service role key and policies.');
-    }
-
-    throw error;
+  if (!insertResponse.ok) {
+    console.error('[license] insert failed', { paymentId, status: insertResponse.status, body: insertBody });
+    throw new Error('Failed to insert license into Supabase.');
   }
 
-  console.log('[license] insert success', { paymentId, licenseKey: data?.license_key, status: data?.status });
+  const insertedRow = Array.isArray(insertBody) ? insertBody[0] : insertBody;
+  console.log('[license] insert success', { paymentId, licenseKey: insertedRow?.license_key, status: insertedRow?.status });
 
   return {
     created: true,
-    licenseKey: data?.license_key || licenseKey,
-    status: data?.status || 'active',
+    licenseKey: insertedRow?.license_key || licenseKey,
+    status: insertedRow?.status || 'active',
   };
 }
 

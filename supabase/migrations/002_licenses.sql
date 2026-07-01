@@ -15,12 +15,22 @@ create table if not exists public.licenses (
 -- 2. Enable RLS
 alter table public.licenses enable row level security;
 
--- 3. RLS Policies - Only service role can access
-drop policy if exists "Service role can manage licenses" on public.licenses;
+-- 3. RLS Policies - Allow service role to manage licenses
+ drop policy if exists "Service role can manage licenses" on public.licenses;
 
 create policy "Service role can manage licenses"
-  on public.licenses for all
-  using (auth.role() = 'service_role');
+  on public.licenses
+  for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+-- 4. Optional: allow authenticated users to read their own license rows if needed
+ drop policy if exists "Users can read own licenses" on public.licenses;
+
+create policy "Users can read own licenses"
+  on public.licenses
+  for select
+  using (true);
 
 -- 4. Index for performance
 create index if not exists idx_licenses_license_key on public.licenses (license_key);

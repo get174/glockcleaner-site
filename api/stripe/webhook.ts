@@ -59,14 +59,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let paymentId = '';
   let email = '';
+  let checkoutSession: Stripe.Checkout.Session | null = null;
 
   if (event.type === 'checkout.session.completed') {
-    const checkoutSession = event.data.object as Stripe.Checkout.Session;
+    checkoutSession = event.data.object as Stripe.Checkout.Session;
     paymentId = typeof checkoutSession.payment_intent === 'string'
       ? checkoutSession.payment_intent
       : checkoutSession.payment_intent?.id || checkoutSession.id;
     email = checkoutSession.customer_details?.email || checkoutSession.customer_email || checkoutSession.metadata?.userEmail || '';
   }
+
+  console.log('[stripe-webhook] extracted checkout data', {
+    eventType: event.type,
+    paymentId,
+    email,
+    checkoutId: checkoutSession?.id,
+  });
 
   if (!paymentId) {
     console.error('[stripe-webhook] missing payment id', { eventType: event.type });
