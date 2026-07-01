@@ -2,14 +2,23 @@ import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
 import { randomBytes } from 'crypto';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('Supabase config missing in serverless environment.');
+const hasSupabaseConfig = Boolean(supabaseUrl && supabaseServiceKey);
+
+if (!hasSupabaseConfig) {
+  console.error('Supabase config missing in serverless environment. Expected SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SERVICE_KEY).');
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseServiceKey || '');
+export const supabase = hasSupabaseConfig
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    })
+  : null;
 
 export const emailTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -35,6 +44,12 @@ export async function ensureLicenseForPayment({
   email: string;
   paymentId: string;
 }) {
+  if (!supabase) {
+    const error = new Error('Supabase is not configured for license creation.');
+    console.error('[license] missing Supabase client', { paymentId });
+    throw error;
+  }
+
   const sanitizedEmail = email.toLowerCase().trim();
   console.log('[license] ensureLicenseForPayment start', { paymentId, email: sanitizedEmail });
 
@@ -81,6 +96,15 @@ export async function ensureLicenseForPayment({
 
   if (error) {
     console.error('[license] insert failed', { paymentId, error });
+
+    if (error.code === '42P01') {
+      throw new Error('The licenses table does not exist. Run the Supabase migration from supabase/migrations/002_licenses.sql.');
+    }
+
+    if (error.code === '42501') {
+      throw new Error('Supabase blocked the insert because of RLS/permissions. Verify the service role key and policies.');
+    }
+
     throw error;
   }
 

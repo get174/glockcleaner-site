@@ -38,6 +38,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   let event: Stripe.Event;
 
+  console.log('SIGNATURE HEADER:', sig);
+  console.log('SECRET EXISTS:', !!webhookSecret);
+  console.log('BODY LENGTH:', requestBody.length);
+
   try {
     event = stripe.webhooks.constructEvent(requestBody, sig, webhookSecret);
   } catch (err) {
