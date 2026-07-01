@@ -332,7 +332,7 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), async
 
   const paymentIntent = event.data.object;
   const paymentId = paymentIntent.id;
-  const email = paymentIntent.receipt_email || paymentIntent.metadata?.customer_email;
+  const email = paymentIntent.metadata?.userEmail || paymentIntent.receipt_email;
 
   if (!email) {
     console.error('No email found in payment intent');

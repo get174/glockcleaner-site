@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import Stripe from 'stripe';
-import { supabase, generateLicenseKey, emailTransporter } from '../_utils.js';
+import { emailTransporter, ensureLicenseForPayment } from '../_utils.js';
 
 export const config = {
   api: {
@@ -37,70 +37,67 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid webhook');
   }
 
-  if (event.type !== 'payment_intent.succeeded') {
+  if (!['payment_intent.succeeded', 'checkout.session.completed', 'charge.succeeded'].includes(event.type)) {
     return res.status(200).send('Event not processed');
   }
 
-  const paymentIntent = event.data.object as Stripe.PaymentIntent;
-  const paymentId = paymentIntent.id;
+  let paymentId = '';
+  let email = '';
 
-  // SECURITY FIX: Never trust receipt_email from Stripe - it can be manipulated
-  // Use metadata set during payment creation instead
-  const email = paymentIntent.metadata?.userEmail || paymentIntent.receipt_email;
+  if (event.type === 'checkout.session.completed') {
+    const checkoutSession = event.data.object as Stripe.Checkout.Session;
+    paymentId = typeof checkoutSession.payment_intent === 'string'
+      ? checkoutSession.payment_intent
+      : checkoutSession.payment_intent?.id || '';
+    email = checkoutSession.customer_details?.email || checkoutSession.metadata?.userEmail || '';
+  } else if (event.type === 'charge.succeeded') {
+    const charge = event.data.object as Stripe.Charge;
+    paymentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : '';
+    email = charge.billing_details?.email || '';
+  } else {
+    const paymentIntent = event.data.object as Stripe.PaymentIntent;
+    paymentId = paymentIntent.id;
+    email = paymentIntent.metadata?.userEmail || paymentIntent.receipt_email || '';
+  }
 
-  // Validate email format before using
-  if (!email || typeof email !== 'string' || !email.includes('@')) {
-    console.error('Invalid email in payment metadata');
+  if (!paymentId) {
+    console.error('Missing payment id in webhook event', event.type);
     return res.status(400).send('Invalid payment data');
   }
 
   const sanitizedEmail = email.toLowerCase().trim();
-  if (sanitizedEmail.length > 254) {
-    console.error('Email too long');
-    return res.status(400).send('Invalid email');
+  if (!sanitizedEmail || sanitizedEmail.length > 254 || !sanitizedEmail.includes('@')) {
+    console.error('Invalid email in payment metadata');
+    return res.status(400).send('Invalid payment data');
   }
 
-  const { data: existing } = await supabase
-    .from('licenses')
-    .select('id')
-    .eq('payment_id', paymentId)
-    .single();
-
-  if (existing) return res.status(200).send('Already processed');
-
-  const licenseKey = generateLicenseKey();
-
-  const { error } = await supabase
-    .from('licenses')
-    .insert({
+  try {
+    const result = await ensureLicenseForPayment({
       email: sanitizedEmail,
-      license_key: licenseKey,
-      payment_id: paymentId,
-      status: 'active',
-      created_at: new Date().toISOString(),
+      paymentId,
     });
 
-  if (error) {
+    if (result.created) {
+      try {
+        await emailTransporter.sendMail({
+          from: process.env.SMTP_FROM || 'noreply@getglockcleaner.com',
+          to: sanitizedEmail,
+          subject: 'Your GlockCleaner Activation Key',
+          html: `
+            <h1>Thank you for your purchase!</h1>
+            <p>Your activation key is:</p>
+            <pre style="background: #f5f5f5; padding: 16px; font-size: 24px; border-radius: 8px;">${result.licenseKey}</pre>
+            <p>Use this key to activate your software.</p>
+          `,
+        });
+      } catch (emailErr) {
+        console.error('Error sending email:', emailErr);
+      }
+    }
+
+    return res.status(200).send('OK');
+  } catch (error) {
     console.error('Error saving license:', error);
     return res.status(500).send('Error saving license');
   }
-
-  // Send activation email with license key
-  try {
-    await emailTransporter.sendMail({
-      from: process.env.SMTP_FROM || 'noreply@getglockcleaner.com',
-      to: sanitizedEmail,
-      subject: 'Your GlockCleaner Activation Key',
-      html: `
-        <h1>Thank you for your purchase!</h1>
-        <p>Your activation key is:</p>
-        <pre style="background: #f5f5f5; padding: 16px; font-size: 24px; border-radius: 8px;">${licenseKey}</pre>
-        <p>Use this key to activate your software.</p>
-      `,
-    });
-  } catch (emailErr) {
-    console.error('Error sending email:', emailErr);
-  }
-
-  return res.status(200).send('OK');
 }

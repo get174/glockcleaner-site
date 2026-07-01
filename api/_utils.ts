@@ -28,6 +28,62 @@ export function generateLicenseKey() {
   return `GLC-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
 }
 
+export async function ensureLicenseForPayment({
+  email,
+  paymentId,
+}: {
+  email: string;
+  paymentId: string;
+}) {
+  const sanitizedEmail = email.toLowerCase().trim();
+
+  if (!sanitizedEmail || !sanitizedEmail.includes('@')) {
+    throw new Error('Invalid email for license creation');
+  }
+
+  const { data: existing, error: existingError } = await supabase
+    .from('licenses')
+    .select('id, license_key, status')
+    .eq('payment_id', paymentId)
+    .maybeSingle();
+
+  if (existingError && existingError.code !== 'PGRST116') {
+    throw existingError;
+  }
+
+  if (existing) {
+    return {
+      created: false,
+      licenseKey: existing.license_key,
+      status: existing.status,
+    };
+  }
+
+  const licenseKey = generateLicenseKey();
+  const { data, error } = await supabase
+    .from('licenses')
+    .insert({
+      email: sanitizedEmail,
+      license_key: licenseKey,
+      payment_id: paymentId,
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select('id, license_key, status')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return {
+    created: true,
+    licenseKey: data?.license_key || licenseKey,
+    status: data?.status || 'active',
+  };
+}
+
 // Stripe configuration
 export const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 export const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

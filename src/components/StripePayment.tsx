@@ -89,6 +89,28 @@ function CheckoutForm({
         }
       }
 
+      try {
+        const paymentIntentId = paymentIntent?.id;
+        if (paymentIntentId) {
+          const finalizeResponse = await fetch(`${window.location.origin}/api/stripe/finalize-payment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              paymentIntentId,
+              userEmail: userData.user?.email || '',
+            }),
+          });
+
+          if (!finalizeResponse.ok) {
+            console.error('Erreur finalisation licence Stripe:', finalizeResponse.statusText);
+          }
+        }
+      } catch (finalizeError) {
+        console.error('Erreur appel finalisation licence:', finalizeError);
+      }
+
       setMessage('Paiement réussi ! Votre licence est active.');
       setLoading(false);
       setTimeout(onSuccess, 3000);
@@ -145,6 +167,10 @@ export default function StripePayment({ plan }: StripePaymentProps) {
   useEffect(() => {
     const createPaymentIntent = async () => {
       try {
+        // Get user email from auth context
+        const { data: userData } = await supabase.auth.getUser();
+        const userEmail = userData.user?.email;
+
         const response = await fetch(`${apiBaseUrl}/stripe/create-payment-intent`, {
           method: 'POST',
           headers: {
@@ -154,6 +180,7 @@ export default function StripePayment({ plan }: StripePaymentProps) {
             amount: plan.price,
             currency: STRIPE_CURRENCY,
             planName: `Plan ${plan.name}`,
+            userEmail: userEmail || '',
           }),
         });
 
