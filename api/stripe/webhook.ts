@@ -37,6 +37,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid webhook');
   }
 
+  console.log('[stripe-webhook] received event', { type: event.type, id: event.id });
+
   if (!['payment_intent.succeeded', 'checkout.session.completed', 'charge.succeeded'].includes(event.type)) {
     return res.status(200).send('Event not processed');
   }
@@ -61,9 +63,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!paymentId) {
-    console.error('Missing payment id in webhook event', event.type);
+    console.error('[stripe-webhook] missing payment id', { eventType: event.type });
     return res.status(400).send('Invalid payment data');
   }
+
+  console.log('[stripe-webhook] processing payment', { eventType: event.type, paymentId, email: sanitizedEmail });
 
   const sanitizedEmail = email.toLowerCase().trim();
   if (!sanitizedEmail || sanitizedEmail.length > 254 || !sanitizedEmail.includes('@')) {

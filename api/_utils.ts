@@ -36,8 +36,10 @@ export async function ensureLicenseForPayment({
   paymentId: string;
 }) {
   const sanitizedEmail = email.toLowerCase().trim();
+  console.log('[license] ensureLicenseForPayment start', { paymentId, email: sanitizedEmail });
 
   if (!sanitizedEmail || !sanitizedEmail.includes('@')) {
+    console.error('[license] invalid email for license creation', { paymentId, email: sanitizedEmail });
     throw new Error('Invalid email for license creation');
   }
 
@@ -48,10 +50,12 @@ export async function ensureLicenseForPayment({
     .maybeSingle();
 
   if (existingError && existingError.code !== 'PGRST116') {
+    console.error('[license] lookup failed', { paymentId, error: existingError });
     throw existingError;
   }
 
   if (existing) {
+    console.log('[license] existing license found', { paymentId, licenseKey: existing.license_key, status: existing.status });
     return {
       created: false,
       licenseKey: existing.license_key,
@@ -60,6 +64,8 @@ export async function ensureLicenseForPayment({
   }
 
   const licenseKey = generateLicenseKey();
+  console.log('[license] generating new license', { paymentId, licenseKey });
+
   const { data, error } = await supabase
     .from('licenses')
     .insert({
@@ -74,8 +80,11 @@ export async function ensureLicenseForPayment({
     .single();
 
   if (error) {
+    console.error('[license] insert failed', { paymentId, error });
     throw error;
   }
+
+  console.log('[license] insert success', { paymentId, licenseKey: data?.license_key, status: data?.status });
 
   return {
     created: true,

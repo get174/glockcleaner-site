@@ -11,6 +11,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     userEmail?: string;
   };
 
+  console.log('[finalize-payment] request received', { paymentIntentId, userEmail: sanitizedEmail });
+
   if (!paymentIntentId || typeof paymentIntentId !== 'string' || paymentIntentId.trim() === '') {
     return res.status(400).json({ error: 'paymentIntentId is required' });
   }
@@ -25,6 +27,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       email: sanitizedEmail,
       paymentId: paymentIntentId,
     });
+
+    console.log('[finalize-payment] ensureLicenseForPayment result', { paymentIntentId, created: result.created, licenseKey: result.licenseKey });
 
     if (result.created) {
       try {
