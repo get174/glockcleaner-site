@@ -48,10 +48,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   console.log('[stripe-webhook] received event', { type: event.type, id: event.id });
 
-  const supportedEventTypes = ['checkout.session.completed', 'payment_intent.succeeded'];
-  if (!supportedEventTypes.includes(event.type)) {
+  if (event.type !== 'checkout.session.completed') {
     console.log('[stripe-webhook] ignoring event type', { type: event.type, id: event.id });
-    return res.status(200).send('Event not processed');
+    return res.status(200).send('Ignored');
   }
 
   let paymentId = '';
@@ -64,10 +63,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ? checkoutSession.payment_intent
       : checkoutSession.payment_intent?.id || checkoutSession.id;
     email = checkoutSession.customer_details?.email || checkoutSession.customer_email || checkoutSession.metadata?.userEmail || '';
-  } else if (event.type === 'payment_intent.succeeded') {
-    const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    paymentId = paymentIntent.id;
-    email = paymentIntent.metadata?.userEmail || paymentIntent.receipt_email || '';
   }
 
   console.log('[stripe-webhook] extracted checkout data', {
