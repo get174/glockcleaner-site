@@ -67,9 +67,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid payment data');
   }
 
+  const sanitizedEmail = email.toLowerCase().trim();
   console.log('[stripe-webhook] processing payment', { eventType: event.type, paymentId, email: sanitizedEmail });
 
-  const sanitizedEmail = email.toLowerCase().trim();
   if (!sanitizedEmail || sanitizedEmail.length > 254 || !sanitizedEmail.includes('@')) {
     console.error('Invalid email in payment metadata');
     return res.status(400).send('Invalid payment data');
