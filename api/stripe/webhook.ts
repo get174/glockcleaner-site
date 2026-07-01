@@ -104,15 +104,41 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (result.created) {
       try {
+        const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'support@getglockcleaner.com';
         await emailTransporter.sendMail({
-          from: process.env.SMTP_FROM || 'noreply@getglockcleaner.com',
+          from: supportEmail,
           to: sanitizedEmail,
-          subject: 'Your GlockCleaner Activation Key',
+          subject: 'Votre clé d’activation GlockCleaner',
           html: `
-            <h1>Thank you for your purchase!</h1>
-            <p>Your activation key is:</p>
-            <pre style="background: #f5f5f5; padding: 16px; font-size: 24px; border-radius: 8px;">${result.licenseKey}</pre>
-            <p>Use this key to activate your software.</p>
+            <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; color: #111827; line-height:1.4;">
+              <header style="padding:16px 0; border-bottom:1px solid #e6e6e6; margin-bottom:20px;">
+                <h2 style="margin:0; color:#0ea5a4;">GlockCleaner</h2>
+              </header>
+
+              <main>
+                <p>Bonjour,</p>
+                <p>Merci pour votre achat — votre licence GlockCleaner a été activée avec succès. Retrouvez ci‑dessous votre clé d’activation :</p>
+
+                <div style="background:#f8fafc;padding:18px;border-radius:8px;margin:18px 0;font-family:monospace;font-size:18px;">
+                  ${result.licenseKey}
+                </div>
+
+                <p>Instructions d’activation :</p>
+                <ol>
+                  <li>Ouvrez l’application GlockCleaner.</li>
+                  <li>Allez dans <strong>Paramètres → Licence</strong>.</li>
+                  <li>Collez la clé ci‑dessus et cliquez sur <em>Activer</em>.</li>
+                </ol>
+
+                <p>Si vous rencontrez le moindre problème, répondez simplement à cet e‑mail ou contactez notre support : <a href="mailto:${supportEmail}">${supportEmail}</a>.</p>
+
+                <p>Bonne utilisation,<br/>L’équipe GlockCleaner</p>
+              </main>
+
+              <footer style="margin-top:24px;font-size:12px;color:#6b7280;border-top:1px solid #eef2f7;padding-top:12px;">
+                <div>GlockCleaner — Simplifiez le nettoyage de vos armes.</div>
+              </footer>
+            </div>
           `,
         });
       } catch (emailErr) {

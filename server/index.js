@@ -203,12 +203,22 @@ app.post('/api/webhook/paypal', async (req, res) => {
 
     // Envoyer email
     try {
+      const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || 'support@getglockcleaner.com';
       await emailTransporter.sendMail({
-        from: process.env.EMAIL_FROM,
+        from: supportEmail,
         to: email,
-        subject: 'Votre licence GlockCleaner',
-        text: `Votre licence : ${licenseKey}`,
-        html: `<p>Votre licence : <strong>${licenseKey}</strong></p>`,
+        subject: 'Votre clé d’activation GlockCleaner',
+        text: `Bonjour,\n\nMerci pour votre achat. Votre clé d'activation : ${licenseKey}\n\nSi vous avez besoin d'aide : ${supportEmail}`,
+        html: `
+          <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Arial; color:#111827; line-height:1.4;">
+            <h2 style="color:#0ea5a4;margin:0 0 12px 0;">GlockCleaner</h2>
+            <p>Bonjour,</p>
+            <p>Merci pour votre achat — votre licence GlockCleaner a été activée. Voici votre clé d’activation :</p>
+            <div style="background:#f8fafc;padding:16px;border-radius:8px;font-family:monospace;font-size:18px;margin:12px 0;">${licenseKey}</div>
+            <p>Si vous avez besoin d’aide, contactez : <a href="mailto:${supportEmail}">${supportEmail}</a></p>
+            <p>Bien cordialement,<br/>L’équipe GlockCleaner</p>
+          </div>
+        `,
       });
     } catch (emailErr) {
       console.error('Error sending email:', emailErr);
