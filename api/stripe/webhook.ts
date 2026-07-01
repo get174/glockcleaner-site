@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { buffer } from 'micro';
 import Stripe from 'stripe';
 import { emailTransporter, ensureLicenseForPayment } from '../_utils.js';
 
@@ -12,19 +13,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2026-05-27.dahlia',
 });
 
-async function getRawBody(req: VercelRequest): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Uint8Array[] = [];
-
-    req.on('data', (chunk: Uint8Array | string) => {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-    });
-
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).send('Method not allowed');
@@ -32,14 +20,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const sig = req.headers['stripe-signature'] as string;
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const isDevelopment = process.env.NODE_ENV === 'development';
 
   if (!sig || !webhookSecret) {
     console.log('Missing Stripe signature or webhook secret');
     return res.status(400).send('Invalid webhook');
   }
 
-  const payload = await getRawBody(req);
-  console.log('[stripe-webhook] payload length', payload.length, 'content-type', req.headers['content-type']);
+  const payload = await buffer(req);
+  if (isDevelopment) {
+    console.log('[stripe-webhook] payload length', payload.length, 'content-type', req.headers['content-type']);
+  }
 
   let event: Stripe.Event;
 
@@ -50,9 +41,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid webhook');
   }
 
-  console.log('[stripe-webhook] received event', { type: event.type, id: event.id });
+  if (isDevelopment) {
+    console.log('[stripe-webhook] received event', { type: event.type, id: event.id });
+  }
 
-  if (!['payment_intent.succeeded', 'checkout.session.completed', 'charge.succeeded'].includes(event.type)) {
+  if (event.type !== 'checkout.session.completed') {
     return res.status(200).send('Event not processed');
   }
 
@@ -63,16 +56,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const checkoutSession = event.data.object as Stripe.Checkout.Session;
     paymentId = typeof checkoutSession.payment_intent === 'string'
       ? checkoutSession.payment_intent
-      : checkoutSession.payment_intent?.id || '';
-    email = checkoutSession.customer_details?.email || checkoutSession.metadata?.userEmail || '';
-  } else if (event.type === 'charge.succeeded') {
-    const charge = event.data.object as Stripe.Charge;
-    paymentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : '';
-    email = charge.billing_details?.email || '';
-  } else {
-    const paymentIntent = event.data.object as Stripe.PaymentIntent;
-    paymentId = paymentIntent.id;
-    email = paymentIntent.metadata?.userEmail || paymentIntent.receipt_email || '';
+      : checkoutSession.payment_intent?.id || checkoutSession.id;
+    email = checkoutSession.customer_details?.email || checkoutSession.customer_email || checkoutSession.metadata?.userEmail || '';
   }
 
   if (!paymentId) {
@@ -80,8 +65,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid payment data');
   }
 
+  if (!email) {
+    console.error('[stripe-webhook] missing email', { eventType: event.type, paymentId });
+    return res.status(400).send('Missing email');
+  }
+
   const sanitizedEmail = email.toLowerCase().trim();
-  console.log('[stripe-webhook] processing payment', { eventType: event.type, paymentId, email: sanitizedEmail });
+  if (isDevelopment) {
+    console.log('[stripe-webhook] processing payment', { eventType: event.type, paymentId, email: sanitizedEmail });
+  }
 
   if (!sanitizedEmail || sanitizedEmail.length > 254 || !sanitizedEmail.includes('@')) {
     console.error('Invalid email in payment metadata');
