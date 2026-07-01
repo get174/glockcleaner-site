@@ -25,8 +25,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).send('Invalid webhook');
   }
 
-  // Get raw body - with bodyParser disabled, body is Buffer or string
-  const payload = req.body as string | Buffer;
+  // Read raw body from the request stream to ensure signature verification
+  const chunks: Uint8Array[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  const payload = Buffer.concat(chunks);
 
   let event: Stripe.Event;
 
